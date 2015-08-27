@@ -29,6 +29,7 @@
 		var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
 		var linearSpeed = 0.5, angularSpeed = 1.0;
 		var robotUrl;
+		var muted = false;
 		
 
 		function setMicInactive() {micBg.style.color = "Gray";
@@ -64,11 +65,13 @@
 		}	
 		
 		function say (words) {
-			u = new SpeechSynthesisUtterance();
-			u.text = words;
-			u.lang = 'en-US';
-			u.rate = 1.2;
-			speechSynthesis.speak(u);
+			if (muted === false) {
+				u = new SpeechSynthesisUtterance();
+				u.text = words;
+				u.lang = 'en-US';
+				u.rate = 1.2;
+				speechSynthesis.speak(u);
+			}
 		}
 
 		function connect() {
@@ -76,7 +79,7 @@
 			if (connectionState == true) {			// disconnect
 				ros.close();
 			} else {
-				robotUrl = document.getElementById("robotUrlEntry").value;
+				robotUrl = document.getElementById("robotUrlEntry").value.trim();
 				if (robotUrl == '') {
 					alert ("Please supply the robot's URL and port");
 					return;
@@ -103,7 +106,7 @@
 					localStorage.robotUrl = robotUrl;
 					connectButton = document.getElementById("connectButton");
 					connectButton.innerHTML = "Disconnect"
-					say ('okay');
+					say ('connected');
 					connectionState = true
 					console.log ('Connected to websocket server.');
 				});
@@ -119,10 +122,13 @@
 				});
 
 				ros.on('close', function() {
-					connectionState=false;
-					connectButton = document.getElementById("connectButton");
-					connectButton.innerHTML = "Connect"
-					console.log('Connection to websocket server closed.');
+					if (connectionState == true) {		// throw away a second call
+						connectionState = false;
+						connectButton = document.getElementById("connectButton");
+						connectButton.innerHTML = "Connect"
+						say ('connection closed');   
+						console.log('Connection to websocket server closed.');
+					}
 				});
 		}	
 		
@@ -559,7 +565,24 @@
 		  
 		});
 	}
-
+/***
+	$(document).keydown(function (e) {
+		if ($(".input1:focus") && (e.keyCode === 13)) {
+	//		prompt ("ya") //connect()  
+		}
+	});
+	**/
+	
+	function mute () {
+		if (muted === true) {
+			muted = false;
+			document.getElementById("muteButton").innerHTML = "Mute";
+		} else {
+			muted = true;
+			document.getElementById("muteButton").innerHTML = "Unmute";
+		}
+	}
+	
     </script>
 
     <style>
@@ -713,9 +736,9 @@
 		            <li><a href="/">Home</a>
 		            </li>
 					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Choices <span class="caret"></span></a>
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings <span class="caret"></span></a>
 						<ul class="dropdown-menu" role="menu">
-							<li><a href="#">Action</a></li>
+							<li><a href="#" id="muteButton" role="button" onclick="mute()"> Mute </a></li>
 							<li><a href="#">Another action</a></li>
 							<li><a href="#">Something else</a></li>
 							<li class="divider"></li>
@@ -725,8 +748,6 @@
 					  	</ul>
 					</li>
 
-		            <li><a href="#">Settings</a>
-		            </li>
 		            <li><a href="#" data-toggle="modal" data-target="#helpModal">Help</a>
 		            </li>
 		            <li><a href="#" data-toggle="modal" data-target="#aboutModal">About</a>
