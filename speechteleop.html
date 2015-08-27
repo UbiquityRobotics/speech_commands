@@ -29,6 +29,7 @@
 		var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
 		var linearSpeed = 0.5, angularSpeed = 1.0;
 		var robotUrl;
+		
 
 		function setMicInactive() {micBg.style.color = "Gray";
 				micSlash.style.display = "none";
@@ -41,9 +42,10 @@
 		}
 
         /**
-        * Setup all GUI elements when the page is loaded.
+        * Setup GUI elements when the page is loaded.
         */
         function init() {
+			var temp;
 			micBg = document.getElementById("mic-bg");
 			mic =   document.getElementById("mic");
 			micSlash = document.getElementById("mic-slash");
@@ -54,15 +56,18 @@
 				localStorage.otherResultOK = 0;
 			}
 			if (localStorage.robotUrl != undefined) {
-				document.getElementById("robotUrlEntry").value = localStorage.robotUrl	
+				temp = localStorage.robotUrl		// use the last robot address
+			} else {
+				temp = "wss://" + location.hostname + ":9090"  //guess at it
 			}
+			document.getElementById("robotUrlEntry").value = temp
 		}	
 		
 		function say (words) {
 			u = new SpeechSynthesisUtterance();
 			u.text = words;
 			u.lang = 'en-US';
-			u.rate = 1.5;
+			u.rate = 1.2;
 			speechSynthesis.speak(u);
 		}
 
@@ -73,7 +78,7 @@
 			} else {
 				robotUrl = document.getElementById("robotUrlEntry").value;
 				if (robotUrl == '') {
-					alert ("Please supply the robot's URL");
+					alert ("Please supply the robot's URL and port");
 					return;
 				}
 				robotUrl = robotUrl.replace("https:", "wss:");
@@ -98,13 +103,18 @@
 					localStorage.robotUrl = robotUrl;
 					connectButton = document.getElementById("connectButton");
 					connectButton.innerHTML = "Disconnect"
+					say ('okay');
 					connectionState = true
 					console.log ('Connected to websocket server.');
 				});
 
 				ros.on('error', function(error) {
 					 console.log (error);
-					 say ('darn');
+					 say ('Darn. We failed to connect.');
+					 //none of the following work... 
+					 //alert (error.stack);
+					 //alert (error.message);
+					 //alert (JSON.stringify(error));
 					 alert ('Error connecting to websocket server. ');
 				});
 
@@ -190,12 +200,13 @@
 						var result = event.results[0];
 						var topResult = result[0].transcript		
 						var allResults = "";
-						testAllResults:
+						testResults:
 							for (var i = 0; i < result.length; ++i) {
 								candidate = result[i].transcript.toLowerCase().trim();
 								
 								testCandidate: switch (candidate){
 							        case 'forward':
+									case 'go forward':
 									case 'keep going':
 									case 'go ahead':
 									case 'go straight':
@@ -205,6 +216,7 @@
 							        	break testCandidate;
 									case "reverse":
 									case "back":
+									case "go back":
 										x = -linearSpeed;
 										commandFound = true;
 										break testCandidate;
@@ -219,11 +231,13 @@
 										commandFound = true;
 										break testCandidate;
 									case "roll right":
+									case "strafe right":
 										x = linearSpeed;
 										z = angularSpeed;
 										commandFound = true;
 										break testCandidate;
 									case "roll left":
+									case "strafe left":
 										x = linearSpeed;
 										z = angularSpeed;
 										commandFound = true;
@@ -245,18 +259,38 @@
 										motionCommand = false;
 										break testCandidate;
 						  		}
-	
+								
+								
+							// it may be a waypoint command
+								var words = candidate.match(/[-\w]+/g);  	// parses candidate to array
+								if (words && words.length > 1) {
+									if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
+										commandFound = true;				// prevent the error msg
+										var waypoint = prompt ("Please confirm the waypoint name", words.slice(1).join(" "));
+										if (waypoint) {
+											setWaypoint (waypoint);
+										}
+									} else if (words.length > 2 && words[0] == "go" && words[1] == "to") {		// go to waypoint
+										commandFound = true;
+										goToWaypoint (words.slice(2).join(" "));
+									} else if (words.length > 2 && words[0] == "remove" && words[1] == "waypoint") { 	// remove waypoint
+										commandFound = true;
+										setWaypoint (words.slice(2).join(" "), 0);
+									} else if (words.length == 2 && words[0] == "go" && words[1] == "h") {	// go home 								
+										commandFound = true;
+										// TODO  go home
+									}
+								}
 						 	if (commandFound === true) {
-								break testAllResults;
+								break testResults;
 							}
 							allResults += " " + candidate;
+							console.log (allResults);
 						}
-						console.log (allResults);
-					}
                  
 					   	 // publish the command
 					if (commandFound === true) {
-						commands = candidate + " (guess #" + (i+1) + " of " + result.length + ") " + commands;
+						commands = candidate + " (alt. #" + (i+1) + " of " + result.length + ") " + commands;
 						commands = commands.slice(0, 50)
 						final_span.innerHTML = "Commands ("+ total_recognized + "): "  + commands;
 						cmd_err_span.innerHTML = "";
@@ -274,29 +308,15 @@
 							localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
 						} 
 
-						console.log ("First result recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
+						console.log ("First a recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
 							(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
 					
-					} else {
-							// it may be a waypoint command
-						var words = topResult.match(/[-\w]+/g);  	// parses topResult
-						if (words && words.length > 1) {
-							if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
-								commandFound = true;				// prevent the error msg
-								var waypoint = prompt ("Please confirm the waypoint name", words.slice(1).join(" "));
-								if (waypoint) {
-									setWaypoint (waypoint);
-								}
-							} else if (words.length > 2 && words[0] == "go" && words[1] == "to") {
-								commandFound = true;
-								goToWaypoint (words.slice(2).join(" "));
-							}
-						}
+					} 
 						if (!commandFound) {
-							cmd_err_span.innerHTML = "Error: " + topResult + " is not a recognized command";
+							cmd_err_span.innerHTML = "Error: " + topResult.toLowerCase() + " is not a recognized command";
 						}
 					} 
-				}	// end of onresult0520063918
+				}	// end of onresult
 			}
 		}		// end of function startRecpgnition
 			
@@ -462,7 +482,6 @@
 			//		});
 			//	}
 			});
-			
 		}
 */
 		
@@ -718,7 +737,7 @@
 	</div>
 
 	<div class="container-fluid">
-		<form role="form" class="form-horizontal" autocomplete="on">
+		<form role="form" class="form-horizontal" autocomplete="on" onsubmit="connect()">
 		    <div id="robot-url" class="form-group form-group-lg">
 		    	<label for="robotUrlEntry" class="control-label col-xs-3">Robot URL:</label>
 		    	<div class="col-xs-6">
@@ -828,6 +847,8 @@
 					<p>slower, slow down</p>
 					<p>waypoint ____ (waypoint name)</p>
 					<p>go to ____ (waypoint name)</p>
+					<p>remove waypoint ____ (waypoint name)</p>
+					<p>go home</p>
 					<hr>
 					<p>Programmer's note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
 					<ol>
@@ -870,10 +891,10 @@
 		<div id="speed_span" "class="final"></div>
     </div>
 	
-    <div class="col-xs-3">
+    <!--div class="col-xs-3">
 		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="getOdometry()">
-			<strong>Test Sub</strong></button>
-	</div>
+			<strong>Test Odom</strong></button>
+	</div-->
 	
 	<div id="results">
 	Speech Recognition Results:
