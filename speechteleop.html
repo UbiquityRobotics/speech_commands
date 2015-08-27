@@ -20,13 +20,14 @@
         var connectionState=false;
 		var recognizing = false;
         var recognition;
-        var final_transcript = '';
+		var total_recognized = 0;
         var noRestartReco;
         var startTimestamp;
 		var ros;								// this will be the connection to Ros
 		var topicName = '/cmd_vel';     		// this is the topic name for the UR robots
 //		var topicName = '/turtle1/cmd_vel';     // this allows testing with turtlesim
-		var speedFactor = 1.0
+		var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
+		var linearSpeed = 0.5, angularSpeed = 1.0;
 		var robotUrl;
 
 		function setMicInactive() {micBg.style.color = "Gray";
@@ -162,11 +163,6 @@
                     if (noRestartReco) {
                         return;
                     }
-             //       setMicInactive ();
-             //       if (!final_transcript) {		
-             //           showInfo('info_start');
-             //           return;
-             //       }
                     showInfo('');
 					restartReco();
                 }
@@ -174,29 +170,25 @@
                 recognition.onresult = function(event) {
 		    		console.log('recognition.onresult');
 
-                    var interim_transcript = '';
 					var commands = ''
-
 					// linear x and y movement and angular z movement
 					var x = 0;
 					var y = 0;
 					var z = 0;
-					var oldX = x;
-					var oldY = y;
-					var oldZ = z;
 		//TODO I think this cmdvel below should be removed, looks like it does nothing.
-					var cmdVel = new ROSLIB.Topic({
-						ros : ros,
-						name : "/cmd_vel",				// prefix with turtle1 to use turtlesim
-						messageType : 'geometry_msgs/Twist'
-					});
+		//			var cmdVel = new ROSLIB.Topic({
+		//				ros : ros,
+		//				name : "/cmd_vel",				// prefix with turtle1 to use turtlesim
+		//				messageType : 'geometry_msgs/Twist'
+		//			});
 				
 			// examine all results to find a match
-					var matchFound = false; 
+					var commandFound = false;
+					var motionCommand = true;
 
 					if (event.results.length > 0) {
 						var result = event.results[0];
-						final_transcript = result[0].transcript		
+						var topResult = result[0].transcript		
 						var allResults = "";
 						testAllResults:
 							for (var i = 0; i < result.length; ++i) {
@@ -208,50 +200,53 @@
 									case 'go ahead':
 									case 'go straight':
 									case 'go':
-							        	x = 0.5;
-										matchFound = true;
+							        	x = linearSpeed;
+										commandFound = true;
 							        	break testCandidate;
 									case "reverse":
 									case "back":
-										x = -0.5;
-										matchFound = true;
+										x = -linearSpeed;
+										commandFound = true;
 										break testCandidate;
 									case "right":
 									case "turn right":
-										z = -1;
-										matchFound = true;
+										z = -angularSpeed;
+										commandFound = true;
 										break testCandidate;
 									case "left":
 									case "turn left":
-										z = 1;
-										matchFound = true;
+										z = angularSpeed;
+										commandFound = true;
 										break testCandidate;
 									case "roll right":
-										x = 0.5;
-										z = -1;
-										matchFound = true;
+										x = linearSpeed;
+										z = angularSpeed;
+										commandFound = true;
 										break testCandidate;
 									case "roll left":
-										x = 0.5;
-										z = 1;
-										matchFound = true;
+										x = linearSpeed;
+										z = angularSpeed;
+										commandFound = true;
 										break testCandidate;
 									case "stop":
 									case "halt":
-										matchFound = true;
+										commandFound = true;
 										break testCandidate;
 									case "faster":
 									case "speed up":
 										speedFactor *= 1.1;
+										commandFound = true;
+										motionCommand = false;
 										break testCandidate;
 									case "slower":
 									case "slow down":
 										speedFactor /= 1.1;
-										//matchFound = true;
+										commandFound = true;
+										motionCommand = false;
 										break testCandidate;
 						  		}
 	
-						 	if (matchFound === true) {
+						 	if (commandFound === true) {
 								break testAllResults;
 							}
 							allResults += " " + candidate;
@@ -260,13 +255,16 @@
 					}
                  
 					   	 // publish the command
-					if (matchFound === true) {
-						commands = candidate + "(#" + (i+1) + ") " + commands;
+					if (commandFound === true) {
+						commands = candidate + " (guess #" + (i+1) + " of " + result.length + ") " + commands;
 						commands = commands.slice(0, 50)
-						final_span.innerHTML = "Commands: " + commands;
+						final_span.innerHTML = "Commands ("+ total_recognized + "): "  + commands;
 						cmd_err_span.innerHTML = "";
+						total_recognized++
 						
-						sendMoveMessage (x, z);
+						if (motionCommand === true) {
+							sendMoveMessage (x, z);
+							}
 
 					// Research: Keep count of how often we used the first result
 
@@ -280,16 +278,28 @@
 							(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
 					
 					} else {
-						cmd_err_span.innerHTML = "Error: " + final_transcript + " is not a recognized command";
+							// it may be a waypoint command
+						var words = topResult.match(/[-\w]+/g);  	// parses topResult
+						if (words && words.length > 1) {
+							if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
+								commandFound = true;				// prevent the error msg
+								var waypoint = prompt ("Please confirm the waypoint name", words.slice(1).join(" "));
+								if (waypoint) {
+									setWaypoint (waypoint);
+								}
+							} else if (words.length > 2 && words[0] == "go" && words[1] == "to") {
+								commandFound = true;
+								goToWaypoint (words.slice(2).join(" "));
+							}
+						}
+						if (!commandFound) {
+							cmd_err_span.innerHTML = "Error: " + topResult + " is not a recognized command";
+						}
 					} 
 				}	// end of onresult0520063918
 			}
 		}		// end of function startRecpgnition
 			
-					// check for changes
-					//     if (oldX !== x || oldY !== y || oldZ !== z) {
-					//       that.emit('change', twist);
-					//     }    
          
 /*
 	
@@ -335,8 +345,7 @@
 
             if (recognizing) {
                 recognition.stop();
-
-console.log('recognition stopped')
+				console.log('recognition stopped')
 				noRestartReco = true;
 				setMicInactive() 
                 return;
@@ -345,7 +354,6 @@ console.log('recognition stopped')
 				startRecognition ();
 			}
 			if (recognition || 0) {
-		        final_transcript = '';
 		        recognition.lang = "en-US";
 		        recognition.start();
 		        noRestartReco = false;
@@ -360,7 +368,6 @@ console.log('recognition stopped')
 
         function restartReco() {
 	    	console.log('restart recognition');
-            final_transcript = '';
             recognition.start();
             noRestartReco = false;
 			recognizing = true;
@@ -381,7 +388,7 @@ console.log('recognition stopped')
  //       }
 
 		function sendMoveMessage(xMove, zMove) {
-			console.log ("move message " + xMove + " " + zMove);
+			console.log ("sending twist x:" + xMove + " z:" + zMove);
 		// linear x and y movement and angular z movement
 			
 			var cmdVel = new ROSLIB.Topic({
@@ -391,35 +398,148 @@ console.log('recognition stopped')
 			});
 	
 			var twist = new ROSLIB.Message({
+				linear: {
+					x: xMove*speedFactor,
+					y: 0.0,
+					z: 0.0
+				},
+
 				angular: {
 					x: 0.0,
 					y: 0.0,
-					z: zMove
-				},
-				linear: {
-					x: xMove,
-					y: 0.0,
-					z: 0.0
+					z: zMove*speedFactor
 				}
 			});
-		cmdVel.publish(twist);
+			
+			speed_span.innerHTML = "Speed " + speedFactor.toFixed(2);
+			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
+				cmdVel.publish (twist);
+				}
 		}
 		
 		function arrowUp () {
-			sendMoveMessage (0.5, 0.0);
+			sendMoveMessage (linearSpeed, 0.0);
 		}
 		function arrowDown () {
-			sendMoveMessage (-0.5, 0.0);
+			sendMoveMessage (-linearSpeed, 0.0);
 		}
 		function arrowRight () {
-			sendMoveMessage (0.0, -1.0);
+			sendMoveMessage (0.0, -angularSpeed);
 		}
 		function arrowLeft () {
-			sendMoveMessage (0.0, 1.0);
+			sendMoveMessage (0.0, angularSpeed);
 		}
 		function stopButton () {
 			sendMoveMessage (0.0, 0.0);
 		}
+		
+	  // ----------------------------------------------------------------------
+      // Save and retrieve a parameter
+      // ----------------------------------------------------------------------
+      
+/*		function testParameters () {
+		
+			var maxVelX = new ROSLIB.Param({
+				ros : ros,
+				name : 'max_vel_y' 
+			});
+			
+		
+			maxVelX.set(0.8);
+			
+			maxVelX.get(function(value) {
+				console.log('MAX VAL: ' + value);
+			});
+			
+			ros.getParams(function(params) {
+				console.log ("Type of params: " + typeof (params))
+				console.log("Params are " + params);
+				console.log("Params [8] is " + params [8]);
+			
+			//	for param in params {
+			//		param.get(function(value) {
+			//			console.log('param: ' + value);
+			//		});
+			//	}
+			});
+			
+		}
+*/
+		
+		function goToWaypoint (waypointName) {
+			var waypoint = new ROSLIB.Param({
+				ros : ros,
+				name : '' 
+			});
+			
+			waypoint.name = "waypoint" + waypointName;
+			waypoint.get(function(value) {
+				if  (!value) {
+					console.log ('Waypoint ' + waypointName + ' was not found');
+					alert ('Waypoint ' + waypointName + ' was not found')
+					}
+				else {
+					console.log('Waypoint ' + waypointName + ': value is ' + value);
+					}
+			});
+		}
+		
+		function setWaypoint (waypointName, value) {
+			var waypoint = new ROSLIB.Param({
+				ros : ros,
+				name : "waypoint" + waypointName 
+			});
+			function setThePoint () {
+				value = 999;				//TODO -- don't have the right data yet
+				waypoint.set(value.toString());
+			}
+			getOdometry (setThePoint);
+		}
+			
+/*	function testParameters () {
+		setWaypoint ("kitchen", 99);
+		setWaypoint ("kitchen", 98);
+		getWaypoint ("kitchen");
+		} */
+		
+		
+	function getOdometry (callbackPosition) {	
+      // ----------------------------------------------------------------------
+      // Subscribing to the robot's Pose
+      // ----------------------------------------------------------------------
+      // The ROSLIB.Topic handles subscribing and publishing a ROS topic. This
+      // topic interacts with the odom topic, published by the robot.
+      var odomTopic = new ROSLIB.Topic({
+        ros         : ros,
+        name        : 'odom',
+        messageType : 'nav_msgs/Odometry'
+      });
+      // Subscribes to the robot's odom topic, which includes the pose. When rosbridge receives the pose
+      // message from ROS, it forwards the message to roslibjs, which calls this callback.
+      odomTopic.subscribe(function(message) {
+        // Formats the pose.
+        // var now = new Date();
+		//TODO  this is where we should place the robot command to move to the desired location.
+        var position = 'x: ' + message.pose.pose.position.x
+          + ', y: ' + message.pose.pose.position.y
+          + ', z: 0.0';
+        var orientation = 'x: ' + message.pose.pose.orientation.x
+          + ', y: ' + message.pose.pose.orientation.y
+          + ', z: ' + message.pose.pose.orientation.z
+          + ', w: ' + message.pose.pose.orientation.w;
+		  
+		odomTopic.unsubscribe();  
+		console.log ('Received message on ' + odomTopic.name + ': #' + message.header.seq);
+		console.log (position);
+		console.log (orientation);
+		callbackPosition ();
+/*        $('#poses > tbody > tr:first').after('<tr>'
+          + '<td>' + now.toLocaleTimeString() + '</td>'
+          + '<td>' + position + '</td>'
+          + '<td>' + orientation + '</td>'); */
+		  
+		});
+	}
 
     </script>
 
@@ -612,6 +732,9 @@ console.log('recognition stopped')
 			</div>
 		</form>
 	</div>
+	
+	
+ 
 
     <div id="speed-label"></div>
     <div id="speed-slider"></div>
@@ -690,10 +813,23 @@ console.log('recognition stopped')
 		    <div class="modal-content">
 		        <div class="modal-header">
 				    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-				    <h4 class="modal-title" id="usingTeleop">Using Teleop</h4>
+				    <h4 class="modal-title" id="usingTeleop">Using Speech Teleop</h4>
 		        </div>
 		        <div class="modal-body">
-		            <p>To test using the turtle simulator: Run the following commands in the terminal, then refresh this page. Check the JavaScript console for additional output.</p>
+		            <p><strong>Speech Commands</strong></p>
+					<p>forward, keep going, go ahead, go straight, go</p>
+					<p>reverse, back</p>
+					<p>right, turn right</p>
+					<p>left, turn left</p>
+					<p>roll right</p>
+					<p>roll left</p>
+					<p>stop, halt</p>
+					<p>faster, speed up</p>
+					<p>slower, slow down</p>
+					<p>waypoint ____ (waypoint name)</p>
+					<p>go to ____ (waypoint name)</p>
+					<hr>
+					<p>Programmer's note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
 					<ol>
 						<li><tt>roscore
 						</li>
@@ -704,16 +840,7 @@ console.log('recognition stopped')
 						<li><tt>use "rostopic echo /turtle1/cmd_vel" to see the results</tt>
 						</li>
 					</ol>
-					<p><strong>Speech Commands</strong></p>
-					<p>forward, keep going, go ahead, go straight, go</p>
-					<p>reverse, back</p>
-					<p>right, turn right</p>
-					<p>left, turn left</p>
-					<p>roll right</p>
-					<p>roll left</p>
-					<p>stop, halt</p>
-					<p>faster, speed up</p>
-					<p>slower, slow down</p>
+					<p>Check the JavaScript console for additional output.</p>
 		        </div>
 		        <div class="modal-footer">
 		            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -739,8 +866,16 @@ console.log('recognition stopped')
 	    </div>
 	</div>
 
-
-    <div id="results">
+	<div id="dash">
+		<div id="speed_span" "class="final"></div>
+    </div>
+	
+    <div class="col-xs-3">
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="getOdometry()">
+			<strong>Test Sub</strong></button>
+	</div>
+	
+	<div id="results">
 	Speech Recognition Results:
         <div id="final_span" "class="final"></div>
         <div id="cmd_err_span" class="cmd_err"></div>
