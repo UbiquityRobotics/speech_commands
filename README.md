@@ -1,10 +1,12 @@
-Speech Commands
+**Speech Commands
 
-This module has to date been prepared only for Loki.
+This module has to date been tested only on Loki.
 
-It consists of HTML and Javascript that utilizes the HTML5 Web Speech API.  It runs only in browsers that support this API. At present, this means Chrome on Windows, Linux, and Android.
+It consists of HTML and Javascript that utilizes the HTML5 Web Speech API.  This API runs only in browsers that support this API. At present, this means Chrome on Windows, Linux, and Android. In other browsers, commands may be issued by clicking arrows on the screen.
 
 After Loki is initialized so it can launch the ros-arduino-bridge, follow these instructions in order to install and run speech commands.
+
+**Installation:
 
 Note the Loki's IP address for later use as a url. 
 
@@ -16,7 +18,8 @@ Restart the service (sudo service apache2 restart). You should not need to enter
 Test the server by addressing it from a browser, for instance http://10.0.0.25/index.html. You should get the apache2 default page.  
 (The default page should be replaced by one that features Ubiquity Robotics.)
 Test again using HTTPS.  The result should be lots of security warnings.
-Copy speechteleop.html from wherever it is to /var/www/html on Loki
+Copy speechteleop.html from wherever it is to /var/www/html on the robot.
+Copy the /scripts and the /fonts folders as subfolders to /var/www/html on the robot.
 
 Copy /etc/ssl/certs/ssl-cert-snakeoil.pem and etc/ssl/certs/ssl-cert-snakeoil.key to /home/ubuntu
 chmod ssl-cert-snakeoil.key so it is readable. /ssl-cert-snakeoil.pem should already be readable. (644)
@@ -25,6 +28,8 @@ Modify the rosbridge launch file with these 3 lines
   <arg name="certfile" default="/home/ubuntu/ssl-cert-snakeoil.pem" />
   <arg name="keyfile" default="/home/ubuntu/ssl-cert-snakeoil.key" />
 The rosbridge launch file is at  /opt/ros/indigo/share/rosbridge_server/launch/rosbridge_websocket.launch
+
+**Running
 
 On each Loki bringup:
 
@@ -47,15 +52,15 @@ roslaunch ros_arduino_python arduino.launch
 roslaunch rosbridge_server rosbridge_websocket.launch.
 
 
-	* In the Chrome browser on your laptop or Android phone, load the speechteleop.html page, using https with the Loki url 
+	* In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url.
 
   
 
-	* in the speechteleop.html page, enter the url https://10.0.0.25:9090 into the Robot URL box and click the Connect button.  It should now say Disconnect.
+	* in the speechteleop.html page, enter the url <robot's url>:9090 into the Robot URL box and click the Connect button.  The button should now say Disconnect. If you intend using speech, use "https" for the url; otherwise you may use "http".
 
 
 Click any arrow to move the robot.
-Click the Microphone to use speech. You will be requested to Allow the use of the mike.  Do it.
+Click the Microphone to use speech. You will be requested to allow the use of the mike.  Do it.
 Say, "forward".  Check the Help for valid commands.
 
 
