@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
 
 	
-	<!--  try loading without http or https -->
+	<!--  load these links without specifying http or https -->
 	<link rel="stylesheet" type="text/css" href="scripts/jquery-ui.css") />
     <link rel="stylesheet" type="text/css" href="scripts/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="scripts/font-awesome.min.css"/>
@@ -81,7 +81,7 @@
             text-align: left;
             min-height: 150px;
         }
-		<!__.navbar-custom a {
+		<!--.navbar-custom a {
 			color: white;
 			background-color: black;
 		}-->
@@ -90,8 +90,8 @@
 			color: rgba(119, 119, 119, 1);
 		}
 		#menu001.navbar-default {
-			font-size: 30px;
-			background-color: rgba(248, 248, 248, 1);
+			font-size: 20px;
+			background-color: rgba(224, 224, 224, 1);
 			border-width: 1px;
 			border-radius: 4px;
 		}
@@ -206,7 +206,7 @@
             </div>
 
             <div class="col-xs-4" style="text-align:center">
-                <p><a class="fa fa-arrow-up fa-5x" id="arrowUp" onclick="arrowUp()"></a>
+                <p><a class="fa fa-arrow-up fa-5x" id="arrowUp" onclick="arrowUp()" data-toggle="tooltip" data-placement="left" title="Forward"></a>
                 </p>
             </div>
         </div>
@@ -214,7 +214,7 @@
 
         <div class="row">
             <div class="col-xs-4"  style="text-align:center">
-                <p><a class="fa fa-arrow-left fa-5x vcenter"  onclick="arrowLeft()"></a>
+                <p><a class="fa fa-arrow-left fa-5x vcenter"  onclick="arrowLeft() "data-toggle="tooltip" data-placement="left" title="Turn Left"></a>
                 </p>
             </div>
 
@@ -229,7 +229,7 @@
 			</div>
 
             <div class="col-xs-4 vcenter" style="text-align:center">
-                <p><a class="fa fa-arrow-right fa-5x"  onclick="arrowRight()"></a>
+                <p><a class="fa fa-arrow-right fa-5x"  onclick="arrowRight()"data-toggle="tooltip" data-placement="left" title="Turn Right" ></a>
                 </p>
             </div>
         </div>
@@ -238,7 +238,7 @@
             <div class="col-xs-4">
             </div>
             <div class="col-xs-4 vcenter" style="text-align:center">
-                <p><a class="fa fa-arrow-down fa-5x" onclick="arrowDown()"></a>
+                <p><a class="fa fa-arrow-down fa-5x" onclick="arrowDown()" data-toggle="tooltip" data-placement="left" title="Back"></a>
                 </p>
             </div>
         </div>
@@ -343,12 +343,11 @@
         <div id="cmd_err_span" class="cmd_err"></div>
     </div>
 
-<script type="text/javascript" src="scripts/jquery.min.js"></script>
+	<script type="text/javascript" src="scripts/jquery.min.js"></script>
     <script type="text/javascript" src="scripts/bootstrap.min.js"></script>
     <script type="text/javascript" src="scripts/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="scripts/eventemitter2.min.js"></script>
 	<script type="text/javascript" src="scripts/roslib.min.js"></script> 
-
    
     <script type="text/javascript">
 
@@ -358,11 +357,13 @@
 		var total_recognized = 0;
         var noRestartReco;
         var startTimestamp;
-		var ros;								// this will be the connection to Ros
-		var topicName = '/cmd_vel';     		// this is the topic name for the UR robots
-//		var topicName = '/turtle1/cmd_vel';     // this allows testing with turtlesim
-		var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
-		var linearSpeed = 0.5, angularSpeed = 1.0;
+		var ros;									// this will be the connection to Ros
+		var topicName = '/cmd_vel';     			// this is the topic name for the UR robots
+//		var topicName = '/turtle1/cmd_vel'; 	    // this allows testing with turtlesim
+		var speedFactor = 1.0						// multiplies or divides speed to go faster or slower
+		var linearSpeed = 0.5, angularSpeed = 1.0;	// initial speed
+		var linearRepeat = 6, angularRepeat = 1;	// number of times to repeat command
+		var repeatInterval = 500;					// wait time between repeats, in ms
 		var robotUrl;
 		var muted = false;
 		
@@ -370,7 +371,7 @@
 		function setMicInactive() {micBg.style.color = "Gray";
 				micSlash.style.display = "none";
 		}
-		function setMicActive() {micBg.style.color="Red";
+		function setMicActive() {micBg.style.color="#00cc00";    // green
 				micSlash.style.display = "none";
 		}
 		function setMicOff() {micBg.style.color = "Gray";
@@ -427,25 +428,21 @@
 				if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") 
 						&& (robotUrl.charAt(robotUrl.length - 5) != ":")) {
 				
-					var r = confirm 
+					var r = alert 
 						("The robot's URL should begin with http, https, ws, or wss, " + 
-							"and end with a port number, like ':9090'. Re-enter it?");
-						if (r == true) {
-							return;
-						}
+							"and end with a port number, like ':9090'.");
+						return;
 				}
-			          			
 		        ros = new ROSLIB.Ros({						// Connecting to ROS.
 		            url: robotUrl 							
 		        });
-				
-
 			}	
 		
 			ros.on('connection', function() {
 					localStorage.robotUrl = robotUrl;
 					connectButton = document.getElementById("connectButton");
 					connectButton.innerHTML = "Disconnect"
+					connectButton.style.background="#00cc00";    		// green
 					say ('connected');
 					connectionState = true
 					console.log ('Connected to websocket server.');
@@ -465,6 +462,7 @@
 				if (connectionState == true) {		// throw away a second call
 					connectionState = false;
 					connectButton = document.getElementById("connectButton");
+					connectButton.style.background = "#006dcc";    
 					connectButton.innerHTML = "Connect"
 					say ('connection closed');   
 					console.log('Connection to websocket server closed.');
@@ -605,7 +603,6 @@
 										break testCandidate;
 						  		}
 								
-								
 							// it may be a waypoint command
 								var words = candidate.match(/[-\w]+/g);  	// parses candidate to array
 								if (words && words.length > 1) {
@@ -621,7 +618,7 @@
 									} else if (words.length > 2 && words[0] == "remove" && words[1] == "waypoint") { 	// remove waypoint
 										commandFound = true;
 										setWaypoint (words.slice(2).join(" "), 0);
-									} else if (words.length == 2 && words[0] == "go" && words[1] == "h") {	// go home 								
+									} else if (words.length == 2 && words[0] == "go" && words[1] == "h") {	// go home 
 										commandFound = true;
 										// TODO  go home
 									}
@@ -768,20 +765,25 @@
 					y: 0.0,
 					z: 0.0
 				},
-
 				angular: {
 					x: 0.0,
 					y: 0.0,
 					z: zMove*speedFactor
 				}
 			});
-			
+			var reps = Math.max (1, Math.abs (xMove) > 0 ? linearRepeat : angularRepeat);
 			speed_span.innerHTML = "Speed " + speedFactor.toFixed(2);
 			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
+				publishCmd ();
+			}
+			function publishCmd() {
 				cmdVel.publish (twist);
+				if (reps > 1) {
+					setTimeout (publishCmd, repeatInterval);
+					reps = reps - 1;
 				}
+			}
 		}
-		
 		function arrowUp () {
 			sendMoveMessage (linearSpeed, 0.0);
 		}
