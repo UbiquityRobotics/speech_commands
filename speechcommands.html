@@ -333,7 +333,7 @@
     </div>
 	
     <!--div class="col-xs-3">
-		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="getOdometry()">
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="getPose()">
 			<strong>Test Odom</strong></button>
 	</div-->
 	
@@ -352,31 +352,31 @@
     <script type="text/javascript">
 
         var connectionState=false;
-		var recognizing = false;
+	var recognizing = false;
         var recognition;
-		var total_recognized = 0;
+	var total_recognized = 0;
         var noRestartReco;
         var startTimestamp;
-		var ros;									// this will be the connection to Ros
-		var topicName = '/cmd_vel';     			// this is the topic name for the UR robots
-//		var topicName = '/turtle1/cmd_vel'; 	    // this allows testing with turtlesim
-		var speedFactor = 1.0						// multiplies or divides speed to go faster or slower
-		var linearSpeed = 0.5, angularSpeed = 1.0;	// initial speed
-		var linearRepeat = 6, angularRepeat = 1;	// number of times to repeat command
-		var repeatInterval = 500;					// wait time between repeats, in ms
-		var robotUrl;
-		var muted = false;
+	var ros;						// this will be the connection to Ros
+	var topicName = '/cmd_vel';     			// this is the topic name for the UR robots
+//	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
+	var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
+	var linearSpeed = 0.5, angularSpeed = 1.0;		// initial speed
+	var linearRepeat = 6, angularRepeat = 1;		// number of times to repeat command
+	var repeatInterval = 500;					// wait time between repeats, in ms
+	var robotUrl;
+	var muted = false;
 		
 
-		function setMicInactive() {micBg.style.color = "Gray";
-				micSlash.style.display = "none";
-		}
-		function setMicActive() {micBg.style.color="#00cc00";    // green
-				micSlash.style.display = "none";
-		}
-		function setMicOff() {micBg.style.color = "Gray";
-			micSlash.style.display = "inline";
-		}
+	function setMicInactive() {micBg.style.color = "Gray";
+			micSlash.style.display = "none";
+	}
+	function setMicActive() {micBg.style.color="#00cc00";    // green
+			micSlash.style.display = "none";
+	}
+	function setMicOff() {micBg.style.color = "Gray";
+		micSlash.style.display = "inline";
+	}
 
         /**
         * Setup GUI elements when the page is loaded.
@@ -604,6 +604,7 @@
 						  		}
 								
 							// it may be a waypoint command
+								motionCommand = false;
 								var words = candidate.match(/[-\w]+/g);  	// parses candidate to array
 								if (words && words.length > 1) {
 									if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
@@ -620,7 +621,7 @@
 										setWaypoint (words.slice(2).join(" "), 0);
 									} else if (words.length == 2 && words[0] == "go" && words[1] == "h") {	// go home 
 										commandFound = true;
-										// TODO  go home
+										// TODO  go home  doesn't do anything yet
 									}
 								}
 						 	if (commandFound === true) {
@@ -634,7 +635,7 @@
 					if (commandFound === true) {
 						commands = candidate + " (alt. #" + (i+1) + " of " + result.length + ") " + commands;
 						commands = commands.slice(0, 50)
-						final_span.innerHTML = "Commands ("+ total_recognized + "): "  + commands;
+						final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
 						cmd_err_span.innerHTML = "";
 						total_recognized++
 						
@@ -650,7 +651,7 @@
 							localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
 						} 
 
-						console.log ("First a recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
+						console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
 							(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
 					
 					} 
@@ -838,14 +839,18 @@
 				name : '' 
 			});
 			
-			waypoint.name = "waypoint" + waypointName;
+			waypoint.name = "waypoint/" + waypointName;
 			waypoint.get(function(value) {
 				if  (!value) {
 					console.log ('Waypoint ' + waypointName + ' was not found');
-					alert ('Waypoint ' + waypointName + ' was not found')
+					alert ('Waypoint ' + waypointName + ' was not found');
 					}
 				else {
+					value = value.replace ('translation', 'position');		// convert tf pose to the other kind
+					value = value.replace ('rotation', 'orientation');
 					console.log('Waypoint ' + waypointName + ': value is ' + value);
+					waypointPose = JSON.parse(value);
+					moveRobot (waypointPose);
 					}
 			});
 		}
@@ -853,25 +858,109 @@
 		function setWaypoint (waypointName, value) {
 			var waypoint = new ROSLIB.Param({
 				ros : ros,
-				name : "waypoint" + waypointName 
+				name : "waypoint/" + waypointName 
 			});
-			function setThePoint () {
-				value = 999;				//TODO -- don't have the right data yet
-				waypoint.set(value.toString());
+			function setThePoint (location) {
+				console.log ("set " + waypoint.name + " to " + location);
+				waypoint.set(location);
 			}
-			getOdometry (setThePoint);
+			getPose (setThePoint);
 		}
+
+	function getPose(callbackPosition) {	
+      // ----------------------------------------------------------------------
+      // Subscribing to the robot's Pose-- this method uses tfClient
+      // ----------------------------------------------------------------------
+      // A ROSLIB.TFClient object is used to subscribe to TFs from ROS. The fixedFrame 
+      // is the frame all requested transforms will be relative too. 
+      // The thresholds are the amount a TF must change in order to be republished. 
+		var tfClient = new ROSLIB.TFClient({
+		    ros : ros,
+		    fixedFrame : 'map',
+		    angularThres : 0.01,	// threshold--smaller movements won't be reported
+		    transThres : 0.01
+		});
+		var msgString;
+	
+      // We subscribe to the TF between the fixed frame ('map') and the 'base_link' frame. 
+      // Any transforms between these two frames greater than the specified threshold will 
+      // trigger the callback. The message returned is a ROS TF message.
+		
+		tfClient.subscribe('base_link', function(message) {
+			console.log ('in callback after subscribe');
+			tfClient.unsubscribe('base_link');  			// we only need this once
+			msgString = JSON.stringify(message);
+			console.log ("pose: " + msgString);
+			callbackPosition (msgString);		
+
 			
-/*	function testParameters () {
-		setWaypoint ("kitchen", 99);
-		setWaypoint ("kitchen", 98);
-		getWaypoint ("kitchen");
-		} */
+/* 		
+		// Formats the pose.
+		// var now = new Date();
+
+		var translation = 'x: ' + message.translation.x
+		  + ', y: ' + message.translation.y
+		  + ', z: 0.0';
+		var rotation = 'x: ' + message.rotation.x
+		  + ', y: ' + message.rotation.y
+		  + ', z: ' + message.rotation.z
+		  + ', w: ' + message.rotation.w;  >/
 		
+		console.log ('Received message on ' + tfClient.name + ': #' + message.header.seq);
+		console.log (msgstring);
+*/		
+/*       	format for insertion into a table
+		$('#poses > tbody > tr:first').after('<tr>'
+		  + '<td>' + now.toLocaleTimeString() + '</td>'
+		  + '<td>' + position + '</td>'
+		  + '<td>' + orientation + '</td>');  
+*/
+		});
+	}
+	
+	function moveRobot (movePose) {		// object with following keys: * ros - the ROSLIB.Ros connection handle * serverName - the action server name, like /fibonacci * actionName - the action message name, like 'actionlib_tutorials/FibonacciAction' * timeout - the timeout length when connecting to the action server
+		var mbClient = new ROSLIB.ActionClient({
+		    ros : ros,
+		    serverName : 'move_base',
+		    actionName : 'move_base_msgs/MoveBaseAction'  // MoveBaseMsg and MoveBase don't work either
+		});
+		var move_base_msg = new ROSLIB.Message ({                                                          
+			target_pose_header : {                                                                               
+				frame_id : 'base_footprint',                                                                               
+				stamp : new Date(),                                                                               
+				pose : movePose
+			}
+		});                                    
+		var goal = new ROSLIB.Goal({
+		    actionClient : mbClient,
+		    goalMessage : {
+			    target_pose : {
+				    header : {
+					   frame_id : '/base_footprint',
+					},
+					pose : movePose		// move_base_msg
+				}
+		   }
+		});
 		
+ 	
+		goal.on('feedback', function(feedback) {
+			console.log('Move robot feedback: ' + feedback.sequence);
+		});
+		goal.on('result', function(result) {
+			console.log('Move robot result: ' + JSON.stringify(result));
+		});
+		goal.on('status', function(status) {
+			console.log('Move robot status: ' + JSON.stringify(status));
+		});
+		goal.send();
+		console.log ('goal sent, who knows where it is now');
+	}
+ 	
+/*		
 	function getOdometry (callbackPosition) {	
       // ----------------------------------------------------------------------
-      // Subscribing to the robot's Pose
+      // Subscribing to the robot's Pose-- this is one method
       // ----------------------------------------------------------------------
       // The ROSLIB.Topic handles subscribing and publishing a ROS topic. This
       // topic interacts with the odom topic, published by the robot.
@@ -899,13 +988,16 @@
 		console.log (position);
 		console.log (orientation);
 		callbackPosition ();
-/*        $('#poses > tbody > tr:first').after('<tr>'
-          + '<td>' + now.toLocaleTimeString() + '</td>'
-          + '<td>' + position + '</td>'
-          + '<td>' + orientation + '</td>'); */
+//        $('#poses > tbody > tr:first').after('<tr>'
+//          + '<td>' + now.toLocaleTimeString() + '</td>'
+//         + '<td>' + position + '</td>'
+//          + '<td>' + orientation + '</td>'); 
 		  
 		});
 	}
+*/	
+	
+	
 /***
 	$(document).keydown(function (e) {
 		if ($(".input1:focus") && (e.keyCode === 13)) {
