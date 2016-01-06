@@ -3,15 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-
 	
 	<!--  load these links without specifying http or https -->
-	<link rel="stylesheet" type="text/css" href="scripts/jquery-ui.css") />
+	<link rel="stylesheet" type="text/css" href="scripts/jquery-ui.css"/>
     <link rel="stylesheet" type="text/css" href="scripts/bootstrap.min.css"/>
     <link rel="stylesheet" type="text/css" href="scripts/font-awesome.min.css"/>
      
     <style>
-        * {
+        *{
             font-family: Verdana, Arial, sans-serif;
         }
         a:link {
@@ -192,9 +191,6 @@
 			</div>
 		</form>
 	</div>
-	
-	
- 
 
     <div id="speed-label"></div>
     <div id="speed-slider"></div>
@@ -214,7 +210,7 @@
 
         <div class="row">
             <div class="col-xs-4"  style="text-align:center">
-                <p><a class="fa fa-arrow-left fa-5x vcenter"  onclick="arrowLeft() "data-toggle="tooltip" data-placement="left" title="Turn Left"></a>
+                <p><a class="fa fa-rotate-left fa-5x vcenter"  onclick="arrowLeft() "data-toggle="tooltip" data-placement="left" title="Rotate Left"></a>
                 </p>
             </div>
 
@@ -229,7 +225,7 @@
 			</div>
 
             <div class="col-xs-4 vcenter" style="text-align:center">
-                <p><a class="fa fa-arrow-right fa-5x"  onclick="arrowRight()"data-toggle="tooltip" data-placement="left" title="Turn Right" ></a>
+                <p><a class="fa fa-rotate-right fa-5x"  onclick="arrowRight()"data-toggle="tooltip" data-placement="left" title="Rotate Right" ></a>
                 </p>
             </div>
         </div>
@@ -253,8 +249,9 @@
     	</div>
 
     <div id="info" >
+        <p id="info_none"><br><br></p>
         <p id="info_start">Click on the microphone and begin speaking.</p>
-        <p id="info_speak_now">Speak now.</p>
+        <p id="info_speak_now">Speak now.<br><br></p>
         <p id="info_no_speech">No speech was detected. You may need to adjust your
             <a href="//support.google.com/chrome/bin/answer.py?hl=en&amp;answer=1407892">
       microphone settings</a>.</p>
@@ -279,30 +276,20 @@
 		            <p><strong>Speech Commands</strong></p>
 					<p>forward, keep going, go ahead, go straight, go</p>
 					<p>reverse, back, go back</p>
+					<p>forward/reverse etc., ____ meters/feet </p>
 					<p>turn right</p>
 					<p>turn left</p>
-					<p>right, rotate right</p>
-					<p>left, rotate left</p>
+					<p>rotate right</p>
+					<p>rotate left</p>
 					<p>stop, halt</p>
 					<p>faster, speed up</p>
 					<p>slower, slow down</p>
 					<p>waypoint ____ (waypoint name)</p>
 					<p>go to ____ (waypoint name)</p>
 					<p>remove waypoint ____ (waypoint name)</p>
+					<p>list waypoints</p>
 					<p>go home</p>
-					<hr>
-					<p>Programmer's note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
-					<ol>
-						<li><tt>roscore
-						</li>
-						<li><tt>rosrun turtlesim turtlesim_node
-						</li>
-						<li><tt>roslaunch rosbridge_server rosbridge_websocket.launch</tt>
-						</li>
-						<li><tt>use "rostopic echo /turtle1/cmd_vel" to see the results</tt>
-						</li>
-					</ol>
-					<p>Check the JavaScript console for additional output.</p>
+					<p>help</p>
 		        </div>
 		        <div class="modal-footer">
 		            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -329,19 +316,35 @@
 	</div>
 
 	<div id="dash">
-		<div id="speed_span" "class="final"></div>
+		<div id="speed_span" "Speed factor 1.00" class="final"></div>
     </div>
-	
-    <div class="col-xs-3">
-		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="moveRobotFromPose (1)">
-			<strong>Test</strong></button>
-	</div>
-	
+
 	<div id="results">
 	Speech Recognition Results:
         <div id="final_span" "class="final"></div>
         <div id="cmd_err_span" class="cmd_err"></div>
     </div>
+
+	<!-- Extra button for testing stuff -->
+	<div class="col-xs-3">
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="listWaypoints ()">
+			<strong>Test</strong></button>
+	</div>
+<!------------
+					<p>Programmer's note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
+					<ol>
+						<li><tt>roscore
+						</li>
+						<li><tt>rosrun turtlesim turtlesim_node
+						</li>
+						<li><tt>roslaunch rosbridge_server rosbridge_websocket.launch</tt>
+						</li>
+						<li><tt>use "rostopic echo /turtle1/cmd_vel" to see the results</tt>
+						</li>
+					</ol>
+					<p>Check the JavaScript console for additional output.</p>
+-->
+
 
 	<script type="text/javascript" src="scripts/jquery.min.js"></script>
     <script type="text/javascript" src="scripts/bootstrap.min.js"></script>
@@ -351,16 +354,16 @@
    
     <script type="text/javascript">
 
-        var connectionState=false;
+    var connected=false;
 	var recognizing = false;
-        var recognition;
+    var recognition;
 	var total_recognized = 0;
-        var noRestartReco;
-        var startTimestamp;
+    var noRestartReco;
+    var startTimestamp;
 	var ros;						// this will be the connection to Ros
 	var topicName = '/cmd_vel_mux/input/navi';     			// this is the topic name for the UR robots
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
-	var speedFactor = 1.0					// multiplies or divides speed to go faster or slower
+	var speedFactor = 1.0;					// multiplies or divides speed to go faster or slower
 	var linearSpeed = 0.5, angularSpeed = 1.0;		// initial speed
 	var linearRepeat = 6, angularRepeat = 1;		// number of times to repeat command
 	var repeatInterval = 500;					// wait time between repeats, in ms
@@ -393,29 +396,44 @@
 				localStorage.otherResultOK = 0;
 			}
 			if (localStorage.robotUrl != undefined) {
-				temp = localStorage.robotUrl		// use the last robot address
+				temp = localStorage.robotUrl;		// use the last robot address
 			} else {
-				temp = "wss://" + location.hostname + ":9090"  //guess at it
+				temp = "wss://" + location.hostname + ":9090";  //guess at it
 			}
-			document.getElementById("robotUrlEntry").value = temp
+			document.getElementById("robotUrlEntry").value = temp;
 			if (window.SpeechSynthesisUtterance === undefined) {
 				muted = true;
 			}
+			showInfo ("info_none");
 		}	
 		
 		function say (words) {
+			var wasRecognizing = false;
+			var stowabool;
 			if (muted === false) {
-				u = new SpeechSynthesisUtterance();
+				stowabool = noRestartReco;
+				if (recognizing) { 
+					wasRecognizing = true;
+					noRestartReco = true;   //test
+					recognition.stop (); 
+				}
+				var u = new SpeechSynthesisUtterance();
 				u.text = words;
 				u.lang = 'en-US';
-				u.rate = 1.2;
+				u.rate = 1.1;
+				u.onend = function(event) { 
+					if (wasRecognizing) { 
+						recognition.start ();
+					}
+					noRestartReco = stowabool;
+				}
 				speechSynthesis.speak(u);
 			}
 		}
 
 		function connect() {
 			var connectButton;
-			if (connectionState == true) {			// disconnect
+			if (connected) {			// disconnect
 				ros.close();
 			} else {
 				robotUrl = document.getElementById("robotUrlEntry").value.trim();
@@ -425,8 +443,8 @@
 				}
 				robotUrl = robotUrl.replace("https:", "wss:");
 				robotUrl = robotUrl.replace("http:", "ws:");
-				if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") 
-						&& (robotUrl.charAt(robotUrl.length - 5) != ":")) {
+				if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") &&
+						(robotUrl.charAt(robotUrl.length - 5) != ":")) {
 				
 					var r = alert 
 						("The robot's URL should begin with http, https, ws, or wss, " + 
@@ -441,10 +459,10 @@
 			ros.on('connection', function() {
 					localStorage.robotUrl = robotUrl;
 					connectButton = document.getElementById("connectButton");
-					connectButton.innerHTML = "Disconnect"
+					connectButton.innerHTML = "Disconnect";
 					connectButton.style.background="#00cc00";    		// green
 					say ('connected');
-					connectionState = true
+					connected = true;
 					console.log ('Connected to websocket server.');
 				});
 
@@ -459,8 +477,8 @@
 			});
 
 			ros.on('close', function() {
-				if (connectionState == true) {		// throw away a second call
-					connectionState = false;
+				if (connected) {			// throw away a second call
+					connected = false;
 					connectButton = document.getElementById("connectButton");
 					connectButton.style.background = "#006dcc";    
 					connectButton.innerHTML = "Connect"
@@ -472,7 +490,7 @@
 		}	
 		
 		function startRecognition () {
-  
+
             if (!('webkitSpeechRecognition' in window)) {
                 showInfo ('info_upgrade');
             } else {
@@ -524,143 +542,215 @@
 
                 recognition.onresult = function(event) {
 		    		console.log('recognition.onresult');
-
+					
+					function getDist (howmany, what) {
+						howmany = Number(howmany);
+						if (isNaN(howmany)) {
+							return 0;
+						} else {
+							if (what == "meters" || what == "meter") {
+								return (howmany);
+							} else if (what == "centimeters" || what == "centimeter") {
+								return howmany * 0.01;	
+							} else if (what == "feet" || what == "foot") {
+								return howmany * 0.3048;			// converts feet to meters
+							} else if (what == "degrees" || what == "degree") {
+								return howmany * Math.PI / 180;		// convert to radians
+							} else {
+								return 0;
+							}	
+						}
+					}
+					
 					var commands = ''
 					// linear x and y movement and angular z movement
 					var x = 0;
 					var y = 0;
 					var z = 0;
-		//TODO I think this cmdvel below should be removed, looks like it does nothing.
-		//			var cmdVel = new ROSLIB.Topic({
-		//				ros : ros,
-		//				name : "/cmd_vel",				// prefix with turtle1 to use turtlesim
-		//				messageType : 'geometry_msgs/Twist'
-		//			});
 				
-			// examine all results to find a match
 					var commandFound = false;
-					var motionCommand = true;
-
-					if (event.results.length > 0) {
-						var result = event.results[0];
-						var topResult = result[0].transcript		
-						var allResults = "";
-						testResults:
+					var result;
+					var topCandidate;		
+					var allResults = "";
+					var dist = 0;	
+					if (event.results.length > 0) {		// we have an array of recognition candidates
+						result = event.results[0];
+						topCandidate = result[0].transcript		
+												
+						testAllCandidates:
 							for (var i = 0; i < result.length; ++i) {
 								candidate = result[i].transcript.toLowerCase().trim();
-								
-								testCandidate: switch (candidate){
+								var words = candidate.match(/[-\w]+/g); 								// parses candidate to array
+								if (words.length >= 2) {
+									if (words[0] == 'go' && words[1] != 'to' && words[1] != 'home') {
+										words.splice (0,1)		// remove superfluous "go"
+									}
+								}
+								commandFound = true;
+								testCandidate: switch (words [0]){
 							        case 'forward':
-									case 'go forward':
 									case 'keep going':
-									case 'go ahead':
-									case 'go straight':
+									case 'ahead':
+									case 'straight':
 									case 'go':
-							        	x = linearSpeed;
-										commandFound = true;
-							        	break testCandidate;
+							        	if (words.length == 1) {			
+											x = linearSpeed;
+											sendMoveMessage (x, z);
+										} else if (words.length == 3) {
+											dist = getDist (words[1], words[2]);			// accept meters, translate feet --> meters
+											commandFound = (dist > 0);
+											if (dist > 0) {
+												moveRobotFromPose (dist, 0);		// move dist meters 
+											}
+										} else {
+											commandFound = false;
+										}
+										break testCandidate;
 									case "reverse":
 									case "back":
-									case "go back":
-										x = -linearSpeed;
-										commandFound = true;
+							        	if (words.length == 1) {			
+											x = -linearSpeed;
+											sendMoveMessage (x, z);
+										} else if (words.length == 3) {
+											dist = -getDist (words[1], words[2]);			// accept meters, feet --> meter
+											commandFound = (dist < 0);
+											if (dist < 0) {
+												moveRobotFromPose (dist, 0);		// move dist meters 
+											}
+										} else {commandFound = false;
+										}
 										break testCandidate;
-									case "right":
-									case "rotate right":
-										z = -angularSpeed;
-										commandFound = true;
+									case "rotate":
+										if (words.length == 2 ) {		
+											dist = angularSpeed;
+										} else if (words.length == 4) {
+											dist = getDist (words[2], words[3]);			// accept number of degrees
+										} else {
+											commandFound = false;
+											break testCandidate;
+										}
+										if (dist <= 0) {
+											commandFound = false;
+											break testCandidate;
+										} 
+										rotswitch: switch (words [1]) {
+											case "right":
+												//z = -dist;
+												moveRobotFromPose (0, -dist);	
+												break rotswitch;
+											case "left":
+												moveRobotFromPose (0, dist);
+												//z = dist;
+												break rotswitch;
+											default:
+												commandFound = false;
+												break testCandidate;
+										}
+										sendMoveMessage (x, z);
 										break testCandidate;
-									case "left":
-									case "rotate left":
-										z = angularSpeed;
-										commandFound = true;
-										break testCandidate;
-									case "turn right":
+										
+									case "turn":
+										turnswitch: switch (words [1]) {
+											case "right":
+												z = -angularSpeed;
+												break turnswitch;
+											case "left":
+												z = angularSpeed;
+												break turnswitch;
+											default:
+												commandfound = false;
+												break testCandidate;
+										}
 										x = linearSpeed;
-										z = angularSpeed;
-										commandFound = true;
-										break testCandidate;
-									case "turn left":
-										x = linearSpeed;
-										z = angularSpeed;
-										commandFound = true;
+										sendMoveMessage (x, z);
 										break testCandidate;
 									case "stop":
 									case "halt":
-										commandFound = true;
+										sendMoveMessage (0, 0);
 										break testCandidate;
 									case "faster":
-									case "speed up":
 										speedFactor *= 1.1;
-										commandFound = true;
-										motionCommand = false;
+										speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+										break testCandidate;
+									case "speed":
+										if (words [1] == "up") {
+											speedFactor *= 1.1;
+											speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+										} else {
+											commandFound = false;
+										}
 										break testCandidate;
 									case "slower":
-									case "slow down":
 										speedFactor /= 1.1;
-										commandFound = true;
-										motionCommand = false;
+										speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+										break testCandidate;
+									case "slow":
+										if (words [1] == "down") { 
+											speedFactor /= 1.1;
+											speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+										} else {
+											commandFound = false;
+										}
+										break testCandidate;
+									case "help":
+										$('#helpModal').modal('show');
+										break testAllCandidates;
+									default: 
+										commandFound = false;
 										break testCandidate;
 						  		}
-								
-							// it may be a waypoint command
-								motionCommand = false;
-								var words = candidate.match(/[-\w]+/g);  	// parses candidate to array
-								if (words && words.length > 1) {
-									if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
-										commandFound = true;				// prevent the error msg
-										var waypoint = prompt ("Please confirm the waypoint name", words.slice(1).join(" "));
-										if (waypoint) {
-											setWaypoint (waypoint);
+
+							// it may yet be a waypoint command
+								if (!commandFound) {
+									if (words && words.length > 1) {
+										if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
+											commandFound = true;				// prevent the error msg
+											var waypoint = prompt ("Please confirm the waypoint name", words.slice(1).join(" "));
+											if (waypoint) {
+												setWaypoint (waypoint);
+											}
+										} else if (words.length > 2 && words[0] == "go" && words[1] == "to") {		// go to waypoint
+											commandFound = true;
+											goToWaypoint (words.slice(2).join(" "));
+										} else if (words.length > 2 && words[0] == "remove" && words[1] == "waypoint") { 	// remove waypoint
+											commandFound = true;
+											SetWaypointZero (words.slice(2).join(" "));
+										} else if (words.length == 2 && words[0] == "list" && words[1] == "waypoints") { 	// list the waypoints
+											commandFound = true;
+											listWaypoints ();
+										} else if (words.length == 2 && words[0] == "go" && words[1] == "home") {	// go home 
+											commandFound = true;
+											goToWaypoint ("home");
 										}
-									} else if (words.length > 2 && words[0] == "go" && words[1] == "to") {		// go to waypoint
-										commandFound = true;
-										goToWaypoint (words.slice(2).join(" "));
-									} else if (words.length > 2 && words[0] == "remove" && words[1] == "waypoint") { 	// remove waypoint
-										commandFound = true;
-										setWaypoint (words.slice(2).join(" "), 0);
-									} else if (words.length == 2 && words[0] == "go" && words[1] == "h") {	// go home 
-										commandFound = true;
-										// TODO  go home  doesn't do anything yet
 									}
 								}
-						 	if (commandFound === true) {
-								break testResults;
-							}
 							allResults += " " + candidate;
-							console.log (allResults);
+						 	if (commandFound === true) {
+								break testAllCandidates;
+							}
 						}
-                 
-					   	 // publish the command
-					if (commandFound === true) {
+					console.log (allResults);
+					if (commandFound) {								// publish the command
 						commands = candidate + " (alt. #" + (i+1) + " of " + result.length + ") " + commands;
 						commands = commands.slice(0, 50)
 						final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
 						cmd_err_span.innerHTML = "";
 						total_recognized++
 						
-						if (motionCommand === true) {
-							sendMoveMessage (x, z);
-							}
-
 					// Research: Keep count of how often we used the first result
-
 						if (i==0) {
 							localStorage.firstResultOK = Number(localStorage.firstResultOK) + 1;
 						} else {
 							localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
 						} 
-
 						console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
 							(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
-					
-					} 
-						if (!commandFound) {
-							cmd_err_span.innerHTML = "Error: " + topResult.toLowerCase() + " is not a recognized command";
+					} else {
+							cmd_err_span.innerHTML = "Error: " + topCandidate.toLowerCase() + " is not a recognized command";
 						}
 					} 
 				}	// end of onresult
-			}
+			}   
 		}		// end of function startRecpgnition
 			
          
@@ -710,7 +800,8 @@
                 recognition.stop();
 				console.log('recognition stopped')
 				noRestartReco = true;
-				setMicInactive() 
+				setMicInactive()
+				showInfo('info_none');
                 return;
             }
 			if (!(recognition || 0)) {
@@ -773,7 +864,6 @@
 				}
 			});
 			var reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
-			speed_span.innerHTML = "Speed " + speedFactor.toFixed(2);
 			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
 				publishCmd ();
 			}
@@ -800,58 +890,109 @@
 		function stopButton () {
 			sendMoveMessage (0.0, 0.0);
 		}
+	  // ----------------------------------------------------------------------
+      // Waypoints
+	  // Waypoints are stored as parameters using the rosparam functions.   They are <name value> pairs--both strings.
+	  // The values are obtained by stringify from the location--that is, the robot pose.
+	  // A value of 0 indicates that the waypoint has been removed.
+	  // ----------------------------------------------------------------------
+      
+      // ----------------------------------------------------------------------
+      // Get the value of a waypoint parameter
+	  // -----------------------------------------------
+	  
+		function getWaypointValue(paramname) {
+			return new Promise(function(resolve, reject) {
+				var waypoint = new ROSLIB.Param({
+					ros : ros,
+					name : '' 
+				});
+				waypoint.name = paramname;
+				waypoint.get (function(value) {
+					if  (value !== "0") {
+						resolve (paramname);		// it is an undeleted waypoint 
+						// console.log (paramname + " has a value"); 
+						}
+					else {
+						resolve ("0")		// it is an undeleted waypoint 
+						// console.log (paramname + " has no value");
+					}
+				});
+			});	
+		}
 		
 	  // ----------------------------------------------------------------------
-      // Save and retrieve a parameter
-      // ----------------------------------------------------------------------
-      
-/*		function testParameters () {
+      // List the waypoints
+      // ----------------------------------------------------------------------		
 		
-			var maxVelX = new ROSLIB.Param({
+		function listWaypoints () {
+			var count = 0;
+			var output = "";
+			var promises = [];
+			var waypoint = new ROSLIB.Param({
 				ros : ros,
-				name : 'max_vel_y' 
+				name : '' 
 			});
-			
 		
-			maxVelX.set(0.8);
-			
-			maxVelX.get(function(value) {
-				console.log('MAX VAL: ' + value);
+			ros.getParams(function(params) {				// first get the list of ROS params
+				// console.log("Params: " + params);
+				if (params.length == 0) {
+					say ("No parameters were found, let alone waypoints.");
+				} else {											// look at all the params
+					for (var i = 0; i < params.length; i++) {		// for each one: if a waypoint, get the value
+						if (params[i].search ("/waypoint/") == 0) {			// "/waypoint/" is found at string [0]
+						   promises.push(getWaypointValue(params[i]));
+						   count++
+						}
+					}
+					if (count == 0) {
+						say ("No waypoints were found");
+					} else {
+						Promise.all(promises).then(function(waypoints) {
+							var counter = 0;
+							waypoints.forEach(function(data) {
+								if (data != "0") {			// this would indicate a waypoint that has been removed
+									counter++;
+									output = output + ", " + data.substring(10);
+								}
+							});
+							if (counter == 0) {
+								say ("No waypoints were found");
+							} else if (counter == 1) {
+								say ("The only waypoint is " + output);
+							} else {
+								say ("The waypoints are " + output);
+							}
+						}).catch(function(err){
+							console.log(err);
+						});
+					}	
+				}
 			});
-			
-			ros.getParams(function(params) {
-				console.log ("Type of params: " + typeof (params))
-				console.log("Params are " + params);
-				console.log("Params [8] is " + params [8]);
-			
-			//	for param in params {
-			//		param.get(function(value) {
-			//			console.log('param: ' + value);
-			//		});
-			//	}
-			});
-		}
-*/
-		
+		}	
+
 		function goToWaypoint (waypointName) {
 			var waypoint = new ROSLIB.Param({
 				ros : ros,
 				name : '' 
 			});
-			
 			waypoint.name = "waypoint/" + waypointName;
 			waypoint.get(function(value) {
 				if  (!value) {
-					console.log ('Waypoint ' + waypointName + ' was not found');
-					alert ('Waypoint ' + waypointName + ' was not found');
+					say ('Waypoint ' + waypointName + ' was not found');
+					// alert ('Waypoint ' + waypointName + ' was not found');
 					}
 				else {
-					value = value.replace ('translation', 'position');		// convert tf pose to geometry
-					value = value.replace ('rotation', 'orientation');
 					console.log('Go to waypoint ' + waypointName + ': ' + value);
-					waypointPose = JSON.parse(value);
-					moveRobot (waypointPose);
+					if (value == "0") {
+						say ('Waypoint ' + waypointName + ' has been removed');
+					} else {
+						value = value.replace ('translation', 'position');		// convert tf pose to geometry
+						value = value.replace ('rotation', 'orientation');
+						waypointPose = JSON.parse(value);
+						moveRobotToPose (waypointPose);
 					}
+				}
 			});
 		}
 		
@@ -867,10 +1008,22 @@
 				console.log ("Set waypoint " + waypoint.name + ": " + location);
 				waypoint.set(location);
 			}
-			console.log ("getting pose");
+			// console.log ("getting the current pose");
 			getPose (setWaypointParam);
 		}
-
+		
+		function SetWaypointZero (waypointName) {
+	  // ----------------------------------------------------------------------
+      // Sets a rosparam to string zero, effectively removing it
+      // ----------------------------------------------------------------------	
+	    var waypoint = new ROSLIB.Param({
+				ros : ros,
+				name : "waypoint/" + waypointName 
+			});
+		// console.log ("Set waypoint " + waypoint.name + ": 0 ");
+		waypoint.set("0");
+		}
+		
 		function getPose(callbackPosition) {	
       // ----------------------------------------------------------------------
       // Subscribing to the robot's Pose-- this method uses tfClient
@@ -921,7 +1074,7 @@
 		});
 	}
 	
-	function moveRobot (movePose) {	
+	function moveRobotToPose (movePose) {	
 		var prevStatus = "";
 		var mbClient = new ROSLIB.ActionClient({
 			// object with following keys: * ros - the ROSLIB.Ros connection handle * serverName - the action server name * actionName - the action message name * timeout - the timeout length when connecting to the action server
@@ -929,27 +1082,21 @@
 		    serverName : 'move_base',
 		    actionName : 'move_base_msgs/MoveBaseAction'  
 		});
-//		var move_base_msg = new ROSLIB.Message ({                                                          
-//			target_pose_header : {                                                                               
-//				frame_id : 'base_footprint',                                                                               
-//				stamp : new Date(),                                                                               
-//				pose : movePose
-//			}
-//		});                                    
+                                   
 		var goal = new ROSLIB.Goal({
 		    actionClient : mbClient,
 		    goalMessage : {
 			    target_pose : {
 				    header : {
-					   frame_id : '/map',
+					   frame_id : '/map'
 					},
-					pose : movePose		// move_base_msg
+					pose : movePose			// move_base_msg
 				}
 		   }
 		});
 		goal.on('feedback', function(feedback) {
 			if (feedback) {
-				console.log('Move robot feedback: ' + feedback.sequence);
+				console.log ('Move robot feedback: ' + feedback.sequence);
 			}
 		});
 		goal.on('result', function(result) {
@@ -966,7 +1113,7 @@
 		console.log ('goal sent, who knows where it is now');
 	}
 	
-	function moveRobotFromPose (distance) {
+	function moveRobotFromPose (distance, angle) {
 		var prevStatus = "";
 		var mrbClient = new ROSLIB.ActionClient({
 			ros : ros,
@@ -982,15 +1129,15 @@
 					},
 					pose : {
 						position : {
-							x :	0.5,
-							y : 0.5,
+							x :	distance,
+							y : 0,
 							z : 0
 						},
 						orientation : {
 							x :	0,
 							y : 0,
-							z : 0,
-							w : 1
+							z : Math.sin (angle/2),
+							w : Math.cos (angle/2)
 						}
 					}
 				}
@@ -1000,32 +1147,21 @@
 		goal.on('status', function(status) {
 			statusString = 'Move robot status: ' + JSON.stringify(status);
 			if (statusString !== prevStatus) {
-				console.log(statusString);
+				console.log (statusString);
 				prevStatus = statusString;
 			}
 		});
 		
+		goal.on('result', function(result) {
+			console.log ('Move robot result: ' + JSON.stringify(result));
+		});
+
+		
 	goal.send();
-	console.log ('goal sent ' + JSON.stringify(goal.goalMessage));
+//	console.log ('goal sent ' + JSON.stringify(goal.goalMessage));
 	}
 
- /*------------------------First Try---------------------------------------------	
-	function moveRobotFromPose (distance) {
-		function moveFromPose (poseString) {
-			var destinationPose
-			console.log ("Move " + distance + " m. from " + JSON.stringify (destinationPose));
-			poseString = poseString.replace ('translation', 'position');		// convert tf pose to geometry
-			poseString = poseString.replace ('rotation', 'orientation');
-			destinationPose = JSON.parse (poseString);
-			destinationPose.position.x += distance * destinationPose.orientation.x;
-			destinationPose.position.y += distance * destinationPose.orientation.y;
-			console.log ("Destination is " + JSON.stringify (destinationPose));
-			moveRobot (destinationPose);
-		}
-		getPose (moveFromPose);
-	}
---------------------------------------------------------------------------------*/	
-/*		
+ /*		
 	function getOdometry (callbackPosition) {	
       // ----------------------------------------------------------------------
       // Subscribing to the robot's Pose-- this is one method
@@ -1064,16 +1200,7 @@
 		});
 	}
 */	
-	
-	
-/***
-	$(document).keydown(function (e) {
-		if ($(".input1:focus") && (e.keyCode === 13)) {
-	//		prompt ("ya") //connect()  
-		}
-	});
-	**/
-	
+		
 	function mute () {
 		if (muted === true) {
 			muted = false;
@@ -1085,7 +1212,5 @@
 	}
 	
     </script>
-	
-	
 </body>
 </html>
