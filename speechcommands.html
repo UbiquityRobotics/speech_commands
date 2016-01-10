@@ -276,7 +276,7 @@
 		            <p><strong>Speech Commands</strong></p>
 					<p>forward, keep going, go ahead, go straight, go</p>
 					<p>reverse, back, go back</p>
-					<p>forward/reverse etc., ____ meters/feet </p>
+					<p>forward/reverse etc., ____ meters/centimeters/feet </p>
 					<p>turn right</p>
 					<p>turn left</p>
 					<p>rotate right</p>
@@ -1120,12 +1120,19 @@
 		    serverName : 'move_base',
 		    actionName : 'move_base_msgs/MoveBaseAction'  
 		});
+		function yawToQuaternion(yaw) {
+			return { x : 0,
+               y : 0,
+               z : Math.sin (yaw/2),
+               w : Math.cos (yaw/2)
+			};
+		}
 		var goal = new ROSLIB.Goal({
 			actionClient : mrbClient,
 			goalMessage : {
 				target_pose : {
 					header : {
-					   frame_id : '/base_link',
+					   frame_id : '/base_footprint',
 					},
 					pose : {
 						position : {
@@ -1133,12 +1140,7 @@
 							y : 0,
 							z : 0
 						},
-						orientation : {
-							x :	0,
-							y : 0,
-							z : Math.sin (angle/2),
-							w : Math.cos (angle/2)
-						}
+						orientation : yawToQuaternion (angle)
 					}
 				}
 			}
