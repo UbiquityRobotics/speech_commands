@@ -60,7 +60,10 @@ On each Loki bringup:
 
         rosrun tf2_web_republisher tf2_web_republisher
 * In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url.
-* in the speechcommands.html page, enter the url <robot's url>:9090 into the Robot URL box and click the Connect button.  The button should now say Disconnect. If you intend using speech, use "wss" or "https" for the robot's websocket address; otherwise you may use "ws" or "http".
+* in the speechcommands.html page, enter the url with port number (usually 9090)
+
+        <robot's url>:9090 
+into the Robot URL box and click the Connect button.  The button should now say Disconnect. If you intend using speech, use "wss" or "https" for the robot's websocket address; otherwise you may use "ws" or "http".
 
 ## Running
 * Click any arrow to move the robot.
