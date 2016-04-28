@@ -1,16 +1,15 @@
 # Speech Commands
 
-This module has to date been tested only on Loki.
+Speech commands run in a Chrome browser under Android, Windows, or Linux on whatever computer (or phone) you are using to control the robot. It uses rosbridge to communicate with the robot.
+The program is contained in a single web page, at present called speechcommands.html, which is loaded from a web server.
+The web server runs on the robot.  Thus the program can be loaded whenever the robot is present.
+Because of the use of the microphone, HTTPS must be used, which in turn requires WSS for the web socket to communicate with the robot. Both the server and rosbridge must be set up to accomodate SSL, hence the extra steps in the installation below.
 
-It consists of HTML and Javascript that utilizes the HTML5 Web Speech API.  This API runs only in browsers that support it. At present, this means Chrome on Windows, Linux, and Android. 
-
-Because of the use of the microphone, HTTPS must be used, which in turn requires wss for the web socket to communicate with the robot. Both the server and rosbridge must be set up to accomodate ssl, hence the extra steps in the installation below.
-
-After Loki is initialized so it can launch the ros-arduino-bridge, follow these instructions to install and run speech commands.
+Follow these instructions to install and run speech commands.
 
 ## Installation:
 
-* Note the Loki's IP address for later use as a url. 
+* Note the robot's IP address for later use as a url. 
 * Install Rosbridge: 
 
         sudo apt-get install ros-indigo-rosbridge-suite.
@@ -28,7 +27,7 @@ After Loki is initialized so it can launch the ros-arduino-bridge, follow these 
         sudo service apache2 restart
 * Test the server by addressing it from a browser, for instance http://10.0.0.25/index.html. You should get the apache2 default page.  
 * (TODO The default page should be replaced by one that features Ubiquity Robotics.)
-* Test again using HTTPS.  The result should be a security warnings, since you are not using an officially generated ssl key.
+* Test again using HTTPS.  The result should be a security warning, since you are not using a certified ssl key.
 * Copy speechcommands.html from wherever it is to /var/www/html on the robot.
 * Copy the /scripts and the /fonts folders as subfolders to /var/www/html on the robot.
 
@@ -46,17 +45,12 @@ After Loki is initialized so it can launch the ros-arduino-bridge, follow these 
 
 ## Startup
 
-On each Loki bringup:
-* Set up the RasPi2 serial port:
+Each time you wish to start using speech commands:
 
-        sudo mgetty -s 115200 /dev/ttyAMA0
-* Hit the reset switch on the Loki near the green leds and then launch the ros-arduino bridge: 
-
-        roslaunch ros_arduino_python arduino.launch
-* Launch the rosbridge_server: (Refer to  http://wiki.ros.org/rosbridge_suite/Tutorials/RunningRosbridge)
+* Launch the rosbridge_server on the robot: (Refer to  http://wiki.ros.org/rosbridge_suite/Tutorials/RunningRosbridge)
 
         roslaunch rosbridge_server rosbridge_websocket.launch.
-* Run the tf2_web_republisher
+* Run the tf2_web_republisher on the robot:
 
         rosrun tf2_web_republisher tf2_web_republisher
 * In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url.
