@@ -70,7 +70,8 @@ otherwise you can still click the arrows if you use "ws" or "http".
 ### Running
 * Click any arrow to move the robot.
 * Click the Microphone to use speech. You will be requested to allow the use of the mike.  Do it.
-* Say, "robot forward", or other commands.  Check the Help for valid commands. All commands must be prefaced by the wakeup word, "robot". 
+* Say, "forward", or other commands.  Check the Help for valid commands. 
+* In environments where there is a lot of competing speech, you can turn on the "Wakeup Word" feature, in Settings.  When it is on, all commands must be prefaced by the wakeup word, "robot". 
 
 #To Do / Issues
 Though you can set waypoints, they are not persistent across shutdown/restart.  
@@ -86,3 +87,4 @@ In the browser: See the *link* and *script* statements in the code.
 
 # Authors
 Joe Landau
+jrlandau@gmail.com
