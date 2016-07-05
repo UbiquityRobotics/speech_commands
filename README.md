@@ -48,6 +48,10 @@ Follow these instructions to install and run speech commands.
         <arg name="certfile" default="/home/ubuntu/ssl-cert-snakeoil.pem" />
         <arg name="keyfile" default="/home/ubuntu/ssl-cert-snakeoil.key" />
 
+* Install tf2_web_republisher
+
+		sudo apt-get install  ros-indigo-tf2-web-republisher
+
 
 ### Startup
 
@@ -88,3 +92,4 @@ In the browser: See the *link* and *script* statements in the code.
 # Authors
 Joe Landau
 jrlandau@gmail.com
+7/5/16
