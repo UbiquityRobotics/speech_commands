@@ -45,9 +45,10 @@ Follow these instructions to install and run speech commands.
 	(The rosbridge launch file is at  /opt/ros/indigo/share/rosbridge_server/launch/rosbridge_websocket.launch)
 
         <arg name="ssl" default="true" />
-        <arg name="certfile" default="/home/ubuntu/ssl-cert-snakeoil.pem" />
-        <arg name="keyfile" default="/home/ubuntu/ssl-cert-snakeoil.key" />
+		<arg name="certfile" default="/etc/ssl/certs/ssl-cert-snakeoil.pem" />
+		<arg name="keyfile" default="/etc/ssl/certs/ssl-cert-snakeoil.key" />
 
+       
 * Install tf2_web_republisher
 
 		sudo apt-get install  ros-indigo-tf2-web-republisher
