@@ -332,12 +332,12 @@
 		<br>
     </div>
 	
-<!-- Extra button for testing stuff 
+<!-- Extra button for testing stuff -->
 	<div class="col-xs-3">
-		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="listWaypoints ()">
-			<strong>Test</strong></button>
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="paramdump ()">
+			<strong>Test Paramdump</strong></button>
 	</div>
--->
+
 <!------------
 					<p>Note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
 					<ol>
@@ -370,8 +370,8 @@
     var noRestartReco;
     var startTimestamp;
 	var ros;						// this will be the connection to Ros
-	var topicName = '/cmd_vel';     					// topic name for the UR robots
-//	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
+//	var topicName = '/cmd_vel';     					// topic name for the UR robots
+	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
 	var speedFactor = 1.0;					// multiplies or divides speed to go faster or slower
 	var linearSpeed = 0.5, angularSpeed = 1.0;		// initial speed
@@ -442,6 +442,7 @@
 				u.text = words;
 				u.lang = 'en-US';
 				u.rate = 1.1;
+				u.pitch = 2.0;
 				u.default = true;
 				u.localService = true; 
 				u.onend = function(event) { 
@@ -496,7 +497,7 @@
 				 //alert (error.stack);
 				 //alert (error.message);
 				 //alert (JSON.stringify(error));
-				 bootbox.alert ('Error connecting to websocket server. ');
+				 bootbox.alert ('Error connecting to websocket server. ' + error);
 			});
 
 			ros.on('close', function() {
@@ -1066,6 +1067,7 @@
 			function setWaypointParam (location) {
 				console.log ("Set waypoint " + waypoint.name + ": " + location);
 				waypoint.set(location);
+                                paramdump ();
 			}
 			// console.log ("getting the current pose");
 			getPose (setWaypointParam);
@@ -1081,6 +1083,7 @@
 			});
 		// console.log ("Set waypoint " + waypoint.name + ": 0 ");
 		waypoint.set("0");
+                paramdump ();
 		}
 		
 		function getPose(callbackPosition) {	
@@ -1225,6 +1228,23 @@
 	goal.send();
 
 	}
+
+	function paramdump () {
+		console.log ("sending paramdump message");
+		
+		var dumpTopic = new ROSLIB.Topic({
+			ros : ros,
+			name : 'paramdump',
+			messageType : 'std_msgs/String'
+		});
+
+		var pdumpMsg = new ROSLIB.Message({
+			data: 'dump waypoints'
+		});
+		
+		dumpTopic.publish (pdumpMsg);
+	}	
+
 
  /*		
 	function getOdometry (callbackPosition) {	
