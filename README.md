@@ -58,6 +58,8 @@ Follow these instructions to install and run speech commands.
 
 Each time you wish to start using speech commands:
 
+* Bring up your robot.  On Loki, you would run loki_base.
+
 * Launch the rosbridge_server on the robot: (Refer to  http://wiki.ros.org/rosbridge_suite/Tutorials/RunningRosbridge)
 
         roslaunch rosbridge_server rosbridge_websocket.launch.
