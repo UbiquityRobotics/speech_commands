@@ -37,11 +37,13 @@ Follow these instructions to install and run speech commands.
 * Copy speechcommands.html from wherever it is to /var/www/html on the robot.
 * Copy the /scripts and the /fonts folders as subfolders to /var/www/html on the robot.
 
+Set up a self-signed certificate ("snakeoil") to allow ssl communications between the browser and the robot. 
+
 * Copy /etc/ssl/private/ssl-cert-snakeoil.key to /etc/ssl/certs/  (may need sudo)
 * chmod /etc/ssl/certs/ssl-cert-snakeoil.key so it is readable. /etc/ssl/certs/ssl-cert-snakeoil.pem should already be readable. 
 
         sudo chmod 644 /etc/ssl/certs/ssl-cert-snakeoil.key
-* Modify these 3 lines of the rosbridge launch file:
+* Modify these 3 lines of the rosbridge launch file, to tell rosbridge where to find the certificate and key:
 	(The rosbridge launch file is at  /opt/ros/indigo/share/rosbridge_server/launch/rosbridge_websocket.launch)
 
         <arg name="ssl" default="true" />
@@ -66,7 +68,7 @@ Each time you wish to start using speech commands:
 * Run the tf2_web_republisher on the robot:
 
         rosrun tf2_web_republisher tf2_web_republisher
-* In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url.
+* In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url. The first time, the browser will respond with an error message, which essentially asks you to OK trusting the self-signed certificate.
 * in the speechcommands.html page, enter the url with port number (usually 9090)
 
         <robot's url>:9090 
