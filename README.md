@@ -18,15 +18,16 @@ Follow these instructions to install and run speech commands.
 * Note the robot's IP address for later use as a url. 
 * Install Rosbridge: 
 
-        sudo apt-get install ros-indigo-rosbridge-suite.
+        sudo apt-get install ros-indigo-rosbridge-suite
 * Install the apache2 web server. This also installs the ssl-certs package, which sets up the snakeoil certificate and key.
 
-        sudo apt-get install apache2.  
+        sudo apt-get install apache2
 * Enable the apache2 ssl module
 
         sudo a2enmod ssl
 * Configure apache2 for HTTPS
 
+	sudo make-ssl-cert generate-default-snakeoil --force-overwrite
         sudo a2ensite default-ssl
 * Restart the service. You should not need to enter a passphrase.
 
