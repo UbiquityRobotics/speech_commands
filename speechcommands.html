@@ -158,6 +158,7 @@
 						<ul class="dropdown-menu" role="menu">
 							<li><a href="#" id="muteButton" role="button" onclick="mute()"> Mute </a></li>
 							<li><a href="#" id="wakeupButton" role="button" onclick="toggleWakeup()"> nil</a></li>
+							<li><a href="#" id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()">Show Unrecognized Speech</a></li>
 							<!--
 							<li><a href="#">Another action</a></li>
 							<li><a href="#">Something else</a></li>
@@ -254,14 +255,9 @@
         <p id="info_none"><br><br></p>
         <p id="info_start">Click on the microphone and begin speaking.</p>
         <p id="info_speak_now">Speak now.<br><br></p>
-        <p id="info_no_speech">No speech was detected. You may need to adjust your
-            <a href="//support.google.com/chrome/bin/answer.py?hl=en&amp;answer=1407892">
-      microphone settings</a>.</p>
-        <p id="info_no_microphone" style="display:none">
-            No microphone was found. Check that one is installed and that
-            <a href="//support.google.com/chrome/bin/answer.py?hl=en&amp;answer=1407892">
-    microphone settings</a> are correct.</p>
-        <p id="info_allow">Click the "Allow" button to enable your microphone. Using the https version helps avoid this.</p>
+        <p id="info_no_speech">No speech was detected. You may need to adjust your microphone settings</p>
+        <p id="info_no_microphone" style="display:none">No microphone was found. You may need to adjust your microphone settings</p>
+        <p id="info_allow">Click the "Allow" button to enable your microphone. Using the https version remembers this.</p>
         <p id="info_denied">Permission to use microphone was denied.</p>
         <p id="info_blocked">Permission to use microphone is blocked. To change, go to chrome://settings/contentExceptions#media-stream</p>
         <p id="info_upgrade">This browser doesn't support the Web Speech API. Use <a href="//www.google.com/chrome">Chrome</a> version 25 or later.</p>
@@ -281,8 +277,8 @@
 					<p>forward/reverse etc., ____ meters/centimeters/feet</p>
 					<p>turn right</p>
 					<p>turn left</p>
-					<p>rotate right</p>
-					<p>rotate left</p>
+					<p>rotate right (may add "n degrees")</p>
+					<p>rotate left (may add "n degrees")</p>
 					<p>stop, halt</p>
 					<p>faster, speed up</p>
 					<p>slower, slow down</p>
@@ -332,6 +328,7 @@
 		<br>
     </div>
 	
+<	
 <!-- Extra button for testing stuff 
 	<div class="col-xs-3">
 		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="listWaypoints ()">
@@ -381,6 +378,7 @@
 	var muted = false;
 	var wakeup = ["robot", "loki", "magni"];
 	var useWakeup = false;
+	var showUnrecognized = false;
 		
 
 	function setMicInactive() {micBg.style.color = "Gray";
@@ -519,7 +517,7 @@
             } else {
 
 	            recognition = new webkitSpeechRecognition();
-                recognition.continuous = false;		
+                recognition.continuous = true;		
                 recognition.interimResults = false;
 				recognition.maxAlternatives = 10;		
                 showInfo('info_start');
@@ -527,15 +525,15 @@
                 recognition.onstart = function() {
                     recognizing = true;
                     showInfo('info_speak_now');
-		    		// console.log('recognition.onstart');
+					console.log('onstart');
 					setMicActive ();
                 };
                 recognition.onerror = function(event) {
-		    		console.log('recognition.onerror' + ' ' + event.error);
+		    		console.log('speech recognition error:' + ' ' + event.error);
 
                     if (event.error == 'no-speech') {
                         setMicInactive ();
-                        showInfo('info_no_speech');
+                    //    showInfo('info_no_speech');
                         noRestartReco = false;
                     }
                     if (event.error == 'audio-capture') {
@@ -554,7 +552,7 @@
                 }
 
                 recognition.onend = function() {
-		    		// console.log('recognition.onend, norestart ' + noRestartReco);
+					console.log('onend; ' + (noRestartReco ? "dont restart" : "do restart"));
                     recognizing = false;
                     if (noRestartReco) {
                         return;
@@ -604,7 +602,7 @@
 					var dist = 0;	
 					if (event.results.length > 0) {		// we have an array of recognition candidates
 						result = event.results[0];
-						// topCandidate = result[0].transcript		
+						if (recognition.continuous == true)	{recognition.stop ()}	
 												
 						testAllCandidates:
 							for (var i = 0; i < result.length; ++i) {
@@ -782,12 +780,13 @@
 										}
 									}
 								}
-							allResults += " " + candidate;
+							allResults += "/" + candidate;
 						 	if (commandFound === true) {
 								break testAllCandidates;
 							}
 						}
 					console.log (allResults);
+					if (showUnrecognized) {addLog (allResults)};
 					if (commandFound) {								// publish the command
 						commands = candidate + " (alt. #" + (i+1) + " of " + result.length + ") " + commands;
 						commands = commands.slice(0, 50);
@@ -808,6 +807,7 @@
 							addLog (topCandidate.toLowerCase() + " is not recognized as a command", "red");
 						}
 					} 
+					
 				}	// end of onresult
 			}   
 		}		// end of function startRecpgnition
@@ -985,102 +985,110 @@
       // ----------------------------------------------------------------------		
 		
 		function listWaypoints () {
-			var count = 0;
-			var output = "";
-			var promises = [];
-			var waypoint = new ROSLIB.Param({
-				ros : ros,
-				name : '' 
-			});
-		
-			ros.getParams(function(params) {				// first get the list of ROS params
-				// console.log("Params: " + params);
-				if (params.length == 0) {
-					say ("No parameters were found, let alone waypoints.");
-				} else {											// look at all the params
-					for (var i = 0; i < params.length; i++) {		// for each one: if a waypoint, get the value
-						if (params[i].search ("/waypoint/") == 0) {			// "/waypoint/" is found at string [0]
-						   promises.push(getWaypointValue(params[i]));
-						   count++
-						}
-					}
-					if (count == 0) {
-						say ("No waypoints were found");
-					} else {
-						Promise.all(promises).then(function(waypoints) {
-							var counter = 0;
-							waypoints.forEach(function(data) {
-								if (data != "0") {			// this would indicate a waypoint that has been removed
-									counter++;
-									output = output + ", " + data.substring(10);
-								}
-							});
-							if (counter == 0) {
-								say ("No waypoints were found");
-							} else if (counter == 1) {
-								say ("The only waypoint is " + output);
-							} else {
-								say ("The waypoints are " + output);
+			if (connected) {
+				var count = 0;
+				var output = "";
+				var promises = [];
+				var waypoint = new ROSLIB.Param({
+					ros : ros,
+					name : '' 
+				});
+			
+				ros.getParams(function(params) {				// first get the list of ROS params
+					// console.log("Params: " + params);
+					if (params.length == 0) {
+						say ("No parameters were found, let alone waypoints.");
+					} else {											// look at all the params
+						for (var i = 0; i < params.length; i++) {		// for each one: if a waypoint, get the value
+							if (params[i].search ("/waypoint/") == 0) {			// "/waypoint/" is found at string [0]
+							   promises.push(getWaypointValue(params[i]));
+							   count++
 							}
-						}).catch(function(err){
-							console.log(err);
-						});
-					}	
-				}
-			});
-		}	
+						}
+						if (count == 0) {
+							say ("No waypoints were found");
+						} else {
+							Promise.all(promises).then(function(waypoints) {
+								var counter = 0;
+								waypoints.forEach(function(data) {
+									if (data != "0") {			// this would indicate a waypoint that has been removed
+										counter++;
+										output = output + ", " + data.substring(10);
+									}
+								});
+								if (counter == 0) {
+									say ("No waypoints were found");
+								} else if (counter == 1) {
+									say ("The only waypoint is " + output);
+								} else {
+									say ("The waypoints are " + output);
+								}
+							}).catch(function(err){
+								console.log(err);
+							});
+						}	
+					}
+				});
+			}
+		}			
 
 		function goToWaypoint (waypointName) {
-			var waypoint = new ROSLIB.Param({
+			if (connected) {
+				var waypoint = new ROSLIB.Param({
 				ros : ros,
 				name : '' 
-			});
-			waypoint.name = "waypoint/" + waypointName;
-			waypoint.get(function(value) {
-				if  (!value) {
-					say ('Waypoint ' + waypointName + ' was not found');
-					// alert ('Waypoint ' + waypointName + ' was not found');
+				});
+				waypoint.name = "waypoint/" + waypointName;
+				waypoint.get(function(value) {
+					if  (!value) {
+						say ('Waypoint ' + waypointName + ' was not found');
+						// alert ('Waypoint ' + waypointName + ' was not found');
+						}
+					else {
+						console.log('Go to waypoint ' + waypointName + ': ' + value);
+						if (value == "0") {
+							say ('Waypoint ' + waypointName + ' has been removed');
+						} else {
+							value = value.replace ('translation', 'position');		// convert tf pose to geometry
+							value = value.replace ('rotation', 'orientation');
+							waypointPose = JSON.parse(value);
+							moveRobotToPose (waypointPose);
+						}
 					}
-				else {
-					console.log('Go to waypoint ' + waypointName + ': ' + value);
-					if (value == "0") {
-						say ('Waypoint ' + waypointName + ' has been removed');
-					} else {
-						value = value.replace ('translation', 'position');		// convert tf pose to geometry
-						value = value.replace ('rotation', 'orientation');
-						waypointPose = JSON.parse(value);
-						moveRobotToPose (waypointPose);
-					}
-				}
-			});
+				});
+			}
 		}
 		
 		function setWaypoint (waypointName) {
 	  // ----------------------------------------------------------------------
       // Sets a rosparam to contain the waypoint
       // ----------------------------------------------------------------------	
-	    var waypoint = new ROSLIB.Param({
-				ros : ros,
-				name : "waypoint/" + waypointName 
-			});
-			function setWaypointParam (location) {
-				console.log ("Set waypoint " + waypoint.name + ": " + location);
-				waypoint.set(location);
+			if (connected) {
+				var waypoint = new ROSLIB.Param({
+					ros : ros,
+					name : "waypoint/" + waypointName 
+				});
+				function setWaypointParam (location) {
+					console.log ("Set waypoint " + waypoint.name + ": " + location);
+					waypoint.set(location);
+				}
+				// console.log ("getting the current pose");
+				getPose (setWaypointParam);
 			}
-			// console.log ("getting the current pose");
-			getPose (setWaypointParam);
 		}
 		
 		function SetWaypointZero (waypointName) {
 	  // ----------------------------------------------------------------------
       // Sets a rosparam to string zero, effectively removing it
       // ----------------------------------------------------------------------	
-	    var waypoint = new ROSLIB.Param({
-				ros : ros,
-				name : "waypoint/" + waypointName 
-			});
-		// console.log ("Set waypoint " + waypoint.name + ": 0 ");
-		waypoint.set("0");
+	    	if (connected) {
+				var waypoint = new ROSLIB.Param({
+					ros : ros,
+					name : "waypoint/" + waypointName 
+				});
+			// console.log ("Set waypoint " + waypoint.name + ": 0 ");
+			waypoint.set("0");
+			}
 		}
 		
 		function getPose(callbackPosition) {	
@@ -1091,47 +1099,49 @@
       // A ROSLIB.TFClient object is used to subscribe to TFs from ROS. The fixedFrame 
       // is the frame all requested transforms will be relative to. 
       // The thresholds are the amount a TF must change in order to be republished. 
-		var tfClient = new ROSLIB.TFClient({
-		    ros : ros,
-		    fixedFrame : 'map',
-		    angularThres : 0.01,	// threshold--smaller movements won't be reported
-		    transThres : 0.01
-		});
-		var msgString;
-	
-      // We subscribe to the TF between the fixed frame ('map') and the 'base_link' frame. 
-      // Any transforms between these two frames greater than the specified threshold will 
-      // trigger the callback. The message returned is a ROS TF message.
+			if (connected) {
+				var tfClient = new ROSLIB.TFClient({
+				ros : ros,
+				fixedFrame : 'map',
+				angularThres : 0.01,	// threshold--smaller movements won't be reported
+				transThres : 0.01
+			});
+			var msgString;
 		
-		tfClient.subscribe('base_link', function(message) {
-			tfClient.unsubscribe('base_link');  			// we only need this once
-			msgString = JSON.stringify(message);
-			console.log ("tfClient pose in " + tfClient.fixedFrame + ": " + msgString);
-			callbackPosition (msgString);		
+		  // We subscribe to the TF between the fixed frame ('map') and the 'base_link' frame. 
+		  // Any transforms between these two frames greater than the specified threshold will 
+		  // trigger the callback. The message returned is a ROS TF message.
 			
-/* 		
-		// Formats the pose.
-		// var now = new Date();
+			tfClient.subscribe('base_link', function(message) {
+				tfClient.unsubscribe('base_link');  			// we only need this once
+				msgString = JSON.stringify(message);
+				console.log ("tfClient pose in " + tfClient.fixedFrame + ": " + msgString);
+				callbackPosition (msgString);		
+				
+				/* 		
+						// Formats the pose.
+						// var now = new Date();
 
-		var translation = 'x: ' + message.translation.x
-		  + ', y: ' + message.translation.y
-		  + ', z: 0.0';
-		var rotation = 'x: ' + message.rotation.x
-		  + ', y: ' + message.rotation.y
-		  + ', z: ' + message.rotation.z
-		  + ', w: ' + message.rotation.w;  >/
-		
-		console.log ('Received message on ' + tfClient.name + ': #' + message.header.seq);
-		console.log (msgstring);
-*/		
-/*     	format for insertion into a table
-			$('#poses > tbody > tr:first').after('<tr>'
-			  + '<td>' + now.toLocaleTimeString() + '</td>'
-			  + '<td>' + position + '</td>'
-			  + '<td>' + orientation + '</td>');  
-*/
-		});
-	}
+						var translation = 'x: ' + message.translation.x
+						  + ', y: ' + message.translation.y
+						  + ', z: 0.0';
+						var rotation = 'x: ' + message.rotation.x
+						  + ', y: ' + message.rotation.y
+						  + ', z: ' + message.rotation.z
+						  + ', w: ' + message.rotation.w;  >/
+						
+						console.log ('Received message on ' + tfClient.name + ': #' + message.header.seq);
+						console.log (msgstring);
+				*/		
+				/*     	format for insertion into a table
+							$('#poses > tbody > tr:first').after('<tr>'
+							  + '<td>' + now.toLocaleTimeString() + '</td>'
+							  + '<td>' + position + '</td>'
+							  + '<td>' + orientation + '</td>');  
+				*/
+				});
+			}
+		}
 	
 	function moveRobotToPose (movePose) {	
 		var prevStatus = "";
@@ -1170,60 +1180,61 @@
 	}
 	
 	function moveRobotFromPose (distance, angle) {
-		var statusCount = 0;
-		var prevStatus = "";
-		var moveClient = new ROSLIB.ActionClient({
-			ros : ros,
-		    serverName : 'move_base',
-		    actionName : 'move_base_msgs/MoveBaseAction'  
-		});
-		function yawToQuaternion(yaw) {
-			return { x : 0,
-               y : 0,
-               z : Math.sin (yaw/2),
-               w : Math.cos (yaw/2)
-			};
-		}
-		var goal = new ROSLIB.Goal({
-			actionClient : moveClient,
-			goalMessage : {
-				target_pose : {
-					header : {
-					   frame_id : '/base_link',  	// '/base_footprint', doesn't seem to work on Loki, tho it does on Stage
-					},
-					pose : {
-						position : {
-							x :	distance,
-							y : 0,
-							z : 0
+		if (connected) {
+			var statusCount = 0;
+			var prevStatus = "";
+			var moveClient = new ROSLIB.ActionClient({
+				ros : ros,
+				serverName : 'move_base',
+				actionName : 'move_base_msgs/MoveBaseAction'  
+			});
+			function yawToQuaternion(yaw) {
+				return { x : 0,
+				   y : 0,
+				   z : Math.sin (yaw/2),
+				   w : Math.cos (yaw/2)
+				};
+			}
+			var goal = new ROSLIB.Goal({
+				actionClient : moveClient,
+				goalMessage : {
+					target_pose : {
+						header : {
+						   frame_id : '/base_link',  	// '/base_footprint', doesn't seem to work on Loki, tho it does on Stage
 						},
-						orientation : yawToQuaternion (angle)
+						pose : {
+							position : {
+								x :	distance,
+								y : 0,
+								z : 0
+							},
+							orientation : yawToQuaternion (angle)
+						}
 					}
 				}
-			}
-		});
-		
-		goal.on('status', function(status) {
-			statusCount++;
-			statusString = 'Move robot status: ' + JSON.stringify(status);
-			if (statusString !== prevStatus) {
-				prevStatus = statusString;
-				if (status.status == 4) {
-					say (status.text);
+			});
+			
+			goal.on('status', function(status) {
+				statusCount++;
+				statusString = 'Move robot status: ' + JSON.stringify(status);
+				if (statusString !== prevStatus) {
+					prevStatus = statusString;
+					if (status.status == 4) {
+						say (status.text);
+					}
+					console.log (statusCount + ": " + statusString);
 				}
-				console.log (statusCount + ": " + statusString);
-			}
-			// moveClient.cancel ();  this does not stop the damn messages
-		});
-				/********		This never seems to be called!
-						goal.on('result', function(result) {
-							console.log ('Move robot result: ' + JSON.stringify(result));
-							console.log ("Result: " + JSON.stringify (result));
-							moveClient.cancel ();
-						});
-				******************/
-	goal.send();
-
+				// moveClient.cancel ();  this does not stop the damn messages
+			});
+					/********		This never seems to be called!
+							goal.on('result', function(result) {
+								console.log ('Move robot result: ' + JSON.stringify(result));
+								console.log ("Result: " + JSON.stringify (result));
+								moveClient.cancel ();
+							});
+					******************/
+			goal.send();
+		}
 	}
 
  /*		
@@ -1288,6 +1299,19 @@
 		} else {
 			document.getElementById("wakeupButton").innerHTML = "Don't use wakeup word";
 			document.getElementById("commandHeader").innerHTML = '<strong>Commands--must be preceeded by the word "Robot"</strong>';
+		}
+	}
+	
+	function toggleUnrecognized () {
+		showUnrecognized = !showUnrecognized;
+		setshowUnrecognizedButton ()
+	}
+	
+	function setshowUnrecognizedButton () {
+		if (showUnrecognized === false) {
+			$('#showUnrecognizedButton').html('Show unrecognized speech');
+		} else {
+			document.getElementById("showUnrecognizedButton").innerHTML = "Don't show unrecognized speech";
 		}
 	}
 	
