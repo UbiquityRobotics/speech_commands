@@ -255,9 +255,14 @@
         <p id="info_none"><br><br></p>
         <p id="info_start">Click on the microphone and begin speaking.</p>
         <p id="info_speak_now">Speak now.<br><br></p>
-        <p id="info_no_speech">No speech was detected. You may need to adjust your microphone settings</p>
-        <p id="info_no_microphone" style="display:none">No microphone was found. You may need to adjust your microphone settings</p>
-        <p id="info_allow">Click the "Allow" button to enable your microphone. Using the https version remembers this.</p>
+        <p id="info_no_speech">No speech was detected. You may need to adjust your
+            <a href="//support.google.com/chrome/bin/answer.py?hl=en&amp;answer=1407892">
+      microphone settings</a>.</p>
+        <p id="info_no_microphone" style="display:none">
+            No microphone was found. Check that one is installed and that
+            <a href="//support.google.com/chrome/bin/answer.py?hl=en&amp;answer=1407892">
+    microphone settings</a> are correct.</p>
+        <p id="info_allow">Click the "Allow" button to enable your microphone. Using the https version helps avoid this.</p>
         <p id="info_denied">Permission to use microphone was denied.</p>
         <p id="info_blocked">Permission to use microphone is blocked. To change, go to chrome://settings/contentExceptions#media-stream</p>
         <p id="info_upgrade">This browser doesn't support the Web Speech API. Use <a href="//www.google.com/chrome">Chrome</a> version 25 or later.</p>
@@ -331,8 +336,8 @@
 <	
 <!-- Extra button for testing stuff 
 	<div class="col-xs-3">
-		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="listWaypoints ()">
-			<strong>Test</strong></button>
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="paramdump ()">
+			<strong>Test Paramdump</strong></button>
 	</div>
 -->
 <!------------
@@ -440,6 +445,7 @@
 				u.text = words;
 				u.lang = 'en-US';
 				u.rate = 1.1;
+				u.pitch = 2.0;
 				u.default = true;
 				u.localService = true; 
 				u.onend = function(event) { 
@@ -494,7 +500,7 @@
 				 //alert (error.stack);
 				 //alert (error.message);
 				 //alert (JSON.stringify(error));
-				 bootbox.alert ('Error connecting to websocket server. ');
+				 bootbox.alert ('Error connecting to websocket server. ' + error);
 			});
 
 			ros.on('close', function() {
@@ -1071,6 +1077,7 @@
 				function setWaypointParam (location) {
 					console.log ("Set waypoint " + waypoint.name + ": " + location);
 					waypoint.set(location);
+                    paramdump ();
 				}
 				// console.log ("getting the current pose");
 				getPose (setWaypointParam);
@@ -1088,7 +1095,7 @@
 				});
 			// console.log ("Set waypoint " + waypoint.name + ": 0 ");
 			waypoint.set("0");
-			}
+      		paramdump ();
 		}
 		
 		function getPose(callbackPosition) {	
@@ -1235,6 +1242,17 @@
 					******************/
 			goal.send();
 		}
+	function paramdump () {
+		console.log ("sending paramdump message");
+		var dumpTopic = new ROSLIB.Topic({
+			ros : ros,
+			name : 'paramdump',
+			messageType : 'std_msgs/String'
+		});
+		var pdumpMsg = new ROSLIB.Message({
+			data: 'dump waypoints'
+		});
+		dumpTopic.publish (pdumpMsg);
 	}
 
  /*		
