@@ -18,20 +18,20 @@ Follow these instructions to install and run speech commands.
 * Note the robot's IP address for later use as a url. 
 * Install Rosbridge: 
 
-        `sudo apt-get install ros-kinetic-rosbridge-suite`
+        sudo apt-get install ros-kinetic-rosbridge-suite
 * Install the apache2 web server. This also installs the ssl-certs package, which sets up the snakeoil certificate and key.
 
-        `sudo apt-get install apache2`
+        sudo apt-get install apache2
 * Enable the apache2 ssl module
 
-        `sudo a2enmod ssl`
+        sudo a2enmod ssl
 * Configure apache2 for HTTPS
 
-	`sudo make-ssl-cert generate-default-snakeoil --force-overwrite`
-        `sudo a2ensite default-ssl`
+	sudo make-ssl-cert generate-default-snakeoil --force-overwrite
+        sudo a2ensite default-ssl
 * Restart the service. You should not need to enter a passphrase.
 
-        `sudo service apache2 restart`
+        sudo service apache2 restart
 * Test the server by addressing it from a browser, for instance http://10.0.0.25/index.html. You should get the apache2 default page.  
 * (TODO The default page should be replaced by one that has been customized.)
 * Test again using HTTPS.  The result should be a security warning, since you are not using a certified ssl key.
@@ -54,7 +54,7 @@ Set up a self-signed certificate ("snakeoil") to allow ssl communications betwee
        
 * Install tf2_web_republisher
 
-		`sudo apt-get install  ros-kinetic-tf2-web-republisher`
+		sudo apt-get install  ros-kinetic-tf2-web-republisher
 
 
 ### Startup
