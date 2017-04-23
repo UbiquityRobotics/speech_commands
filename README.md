@@ -65,10 +65,10 @@ Each time you wish to start using speech commands:
 
 * Launch the rosbridge_server on the robot: (Refer to  http://wiki.ros.org/rosbridge_suite/Tutorials/RunningRosbridge)
 
-        `roslaunch rosbridge_server rosbridge_websocket.launch`
+        roslaunch rosbridge_server rosbridge_websocket.launch
 * Run the tf2_web_republisher on the robot:
 
-        `rosrun tf2_web_republisher tf2_web_republisher`
+        rosrun tf2_web_republisher tf2_web_republisher
 * In the Chrome browser on your laptop or Android phone, load the speechcommands.html page, using https with the robot's url. The first time, the browser will respond with an error message, which essentially asks you to OK trusting the self-signed certificate.
 * in the speechcommands.html page, enter the url with port number (usually 9090)
 
