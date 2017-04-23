@@ -43,7 +43,7 @@ Set up a self-signed certificate ("snakeoil") to allow ssl communications betwee
 * Copy /etc/ssl/private/ssl-cert-snakeoil.key to /etc/ssl/certs/  (may need sudo)
 * chmod /etc/ssl/certs/ssl-cert-snakeoil.key so it is readable. /etc/ssl/certs/ssl-cert-snakeoil.pem should already be readable. 
 
-        `sudo chmod 644 /etc/ssl/certs/ssl-cert-snakeoil.key`
+        sudo chmod 644 /etc/ssl/certs/ssl-cert-snakeoil.key
 * Modify these 3 lines of the rosbridge launch file, to tell rosbridge where to find the certificate and key:
 	(The rosbridge launch file is at  /opt/ros/kinetic/share/rosbridge_server/launch/rosbridge_websocket.launch)
 
