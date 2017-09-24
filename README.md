@@ -18,15 +18,16 @@ Follow these instructions to install and run speech commands.
 * Note the robot's IP address for later use as a url. 
 * Install Rosbridge: 
 
-        sudo apt-get install ros-indigo-rosbridge-suite.
+        sudo apt-get install ros-kinetic-rosbridge-suite
 * Install the apache2 web server. This also installs the ssl-certs package, which sets up the snakeoil certificate and key.
 
-        sudo apt-get install apache2.  
+        sudo apt-get install apache2
 * Enable the apache2 ssl module
 
         sudo a2enmod ssl
 * Configure apache2 for HTTPS
 
+	sudo make-ssl-cert generate-default-snakeoil --force-overwrite
         sudo a2ensite default-ssl
 * Restart the service. You should not need to enter a passphrase.
 
@@ -44,7 +45,7 @@ Set up a self-signed certificate ("snakeoil") to allow ssl communications betwee
 
         sudo chmod 644 /etc/ssl/certs/ssl-cert-snakeoil.key
 * Modify these 3 lines of the rosbridge launch file, to tell rosbridge where to find the certificate and key:
-	(The rosbridge launch file is at  /opt/ros/indigo/share/rosbridge_server/launch/rosbridge_websocket.launch)
+	(The rosbridge launch file is at  /opt/ros/kinetic/share/rosbridge_server/launch/rosbridge_websocket.launch)
 
         <arg name="ssl" default="true" />
 		<arg name="certfile" default="/etc/ssl/certs/ssl-cert-snakeoil.pem" />
@@ -53,7 +54,7 @@ Set up a self-signed certificate ("snakeoil") to allow ssl communications betwee
        
 * Install tf2_web_republisher
 
-		sudo apt-get install  ros-indigo-tf2-web-republisher
+		sudo apt-get install  ros-kinetic-tf2-web-republisher
 
 
 ### Startup
@@ -64,7 +65,7 @@ Each time you wish to start using speech commands:
 
 * Launch the rosbridge_server on the robot: (Refer to  http://wiki.ros.org/rosbridge_suite/Tutorials/RunningRosbridge)
 
-        roslaunch rosbridge_server rosbridge_websocket.launch.
+        roslaunch rosbridge_server rosbridge_websocket.launch
 * Run the tf2_web_republisher on the robot:
 
         rosrun tf2_web_republisher tf2_web_republisher
