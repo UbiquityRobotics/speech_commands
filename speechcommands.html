@@ -159,6 +159,7 @@
 							<li><a href="#" id="muteButton" role="button" onclick="mute()"> Mute </a></li>
 							<li><a href="#" id="wakeupButton" role="button" onclick="toggleWakeup()"> nil</a></li>
 							<li><a href="#" id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()">Show Unrecognized Speech</a></li>
+							<li><a href="#" id="simulatorButton" role="button" onclick="toggleSimulator()">Not using topics for simulator</a></li>
 							<!--
 							<li><a href="#">Another action</a></li>
 							<li><a href="#">Something else</a></li>
@@ -370,10 +371,11 @@
 	var total_recognized = 0;
     var noRestartReco;
     var startTimestamp;
-	var ros;						// this will be the connection to Ros
-//	var topicName = '/cmd_vel';     					// topic name for the UR robots
-	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
+	var ros;									// this will be the connection to Ros
+	var topicName = '/cmd_vel';     					// topic name for the UR robots
+//	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
+	var useSimulator = false;							// whether simulator is used
 	var speedFactor = 1.0;					// multiplies or divides speed to go faster or slower
 	var linearSpeed = 0.5, angularSpeed = 1.0;		// initial speed
 	var linearRepeat = 1, angularRepeat = 1;		// number of times to repeat command
@@ -1268,6 +1270,7 @@
 			console.log ('moveRobotFromPose goal sent');
 		}
 	}
+	
 	function cancelRobotMove () {
 		var statusString;
 		if (connected) {
@@ -1351,13 +1354,11 @@
 	function toggleSimulator () {
 		if (useSimulator) {
 			useSimulator = false;
-			document.getElementById("simulatorButton").innerHTML = "Not using simulator";
-			
+			document.getElementById("simulatorButton").innerHTML = "Not using topics for simulator";
 			topicName = '/cmd_vel'; 
 		} else {
 			useSimulator = true;					// topic name for the UR robots
-			document.getElementById("simulatorButton").innerHTML = "Using simulator instead of robot";
-			
+			document.getElementById("simulatorButton").innerHTML = "Using topics for Stage simulator";
 			topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
 		}
 	}
