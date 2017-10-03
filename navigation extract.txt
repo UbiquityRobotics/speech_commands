@@ -1,0 +1,117 @@
+		function getPose(callbackPosition) {	
+      // ----------------------------------------------------------------------
+      // Subscribing to the robot's Pose-- this method uses tfClient
+	  // Calls the callback with the stringified pose
+      // ----------------------------------------------------------------------
+      // A ROSLIB.TFClient object is used to subscribe to TFs from ROS. The fixedFrame 
+      // is the frame all requested transforms will be relative to. 
+      // The thresholds are the amount a TF must change in order to be republished. 
+			if (connected) {
+				var tfClient = new ROSLIB.TFClient({
+				ros : ros,
+				fixedFrame : 'map',
+				angularThres : 0.01,	// threshold--smaller movements won't be reported
+				transThres : 0.01
+			});
+			var msgString;
+		
+		  // We subscribe to the TF between the fixed frame ('map') and the 'base_link' frame. 
+		  // Any transforms between these two frames greater than the specified threshold will 
+		  // trigger the callback. The message returned is a ROS TF message.
+			
+			tfClient.subscribe('base_link', function(message) {
+				tfClient.unsubscribe('base_link');  			// we only need this once
+				msgString = JSON.stringify(message);
+				console.log ("tfClient pose in " + tfClient.fixedFrame + ": " + msgString);
+				callbackPosition (msgString);		
+				});
+			}
+		}
+	
+	function moveRobotToPose (movePose) {	
+		var prevStatus = "";
+		var moveToPoseClient = new ROSLIB.ActionClient({
+			// object with following keys: * ros - the ROSLIB.Ros connection handle * serverName - the action server name * actionName - the action message name * timeout - the timeout length when connecting to the action server
+			ros : ros,
+		    serverName : 'move_base',
+		    actionName : 'move_base_msgs/MoveBaseAction'  
+		});
+                                   
+		var goal = new ROSLIB.Goal({
+		    actionClient : moveToPoseClient,
+		    goalMessage : {
+			    target_pose : {
+				    header : {
+					   frame_id : '/map'
+					},
+					pose : movePose			// move_base_msg
+				}
+		   }
+		});
+
+		goal.on('status', function(status) {
+			statusString = 'Move to pose status: ' + JSON.stringify(status);
+			if (statusString !== prevStatus) {
+				prevStatus = statusString;
+				if (status.status == 4) {
+					say (status.text);
+				}
+				console.log (statusString);
+			}
+			// moveClient.cancel ();  this does not stop the damn messages anyhow
+		});
+		goal.send();
+		console.log ('moveRobotToPose goal sent');
+	}
+	
+	function moveRobotFromPose (distance, angle) {
+		if (connected) {
+			var statusCount = 0;
+			var prevStatus = "";
+			var moveClient = new ROSLIB.ActionClient({
+				ros : ros,
+				serverName : 'move_base',
+				actionName : 'move_base_msgs/MoveBaseAction'  
+			});
+			function yawToQuaternion(yaw) {
+				return { x : 0,
+				   y : 0,
+				   z : Math.sin (yaw/2),
+				   w : Math.cos (yaw/2)
+				};
+			}
+			var goal = new ROSLIB.Goal({
+				actionClient : moveClient,
+				goalMessage : {
+					target_pose : {
+						header : {
+						   frame_id : '/base_link',  	// '/base_footprint', doesn't seem to work on Loki, tho it does on Stage
+						},
+						pose : {
+							position : {
+								x :	distance,
+								y : 0,
+								z : 0
+							},
+							orientation : yawToQuaternion (angle)
+						}
+					}
+				}
+			});
+			
+			goal.on('status', function(status) {
+				statusCount++;
+				statusString = 'Move robot status: ' + JSON.stringify(status);
+				if (statusString !== prevStatus) {
+					prevStatus = statusString;
+					if (status.status == 4) {
+						say (status.text);
+					}
+					console.log (statusCount + ": " + statusString);
+				}
+				// moveClient.cancel ();  this does not stop the damn messages
+			});
+					
+			goal.send();
+		}
+	}
